@@ -92,7 +92,7 @@ class Producto {
   String fullDescripction({int precio = 0, bool inversed = false}) {
     String d = '';
     if (inversed) {
-      d = codigo != null ? ('$codigo -${descripcion.toUpperCase()}') : descripcion.toUpperCase();
+      d = codigo != null ? ('$codigo ${descripcion.toUpperCase()}') : descripcion.toUpperCase();
     } else {
       d = codigo != null ? ('${descripcion.toUpperCase()} -${codigo!}') : (descripcion.toUpperCase());
     }

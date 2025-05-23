@@ -18,9 +18,11 @@ class PedidosProvider extends ChangeNotifier {
     final ahora = DateTime.now();
     final horaActual = ahora.hour;
     final esMismoDia = DateUtils.isSameDay(pedido.fecha, ahora);
+
+
     
     // Si es el mismo día y antes de las 14:00, se puede modificar
-    return esMismoDia && horaActual < 14;
+    return esMismoDia ? horaActual < 14 : ahora.isBefore(pedido.fecha);
   }
 
   bool puedeModificarObservaciones(Pedido pedido) {
@@ -67,7 +69,8 @@ class PedidosProvider extends ChangeNotifier {
       dp.detalles = await _localStorage.getListDetallesPedido(dp.idPedido);
     }
 
-    _pedidos = todosPedidos;
+    // Ordenar pedidos por fecha de forma descendente (más recientes primero)
+    _pedidos = todosPedidos..sort((a, b) => b.fecha.compareTo(a.fecha));
     actualizarEstado();
   }
 
@@ -209,14 +212,14 @@ class PedidosProvider extends ChangeNotifier {
     final pedido = _pedidos.firstWhere((p) => p.idPedido == idPedido);
     
     // Verificar si se puede modificar el pedido
-    if (!puedeModificarPedido(pedido)) {
-      _message = Mensaje(
-        mensaje: 'Los pedidos solo pueden modificarse antes de las 2:00 PM',
-        tipoMensaje: TipoMensaje.error
-      );
-      actualizarEstado();
-      return;
-    }
+    // if (!puedeModificarPedido(pedido)) {
+    //   _message = Mensaje(
+    //     mensaje: 'Los pedidos solo pueden modificarse antes de las 2:00 PM',
+    //     tipoMensaje: TipoMensaje.error
+    //   );
+    //   actualizarEstado();
+    //   return;
+    // }
 
     _pedidoActual = pedido;
     actualizarEstado();

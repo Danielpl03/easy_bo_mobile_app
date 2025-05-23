@@ -15,6 +15,7 @@ import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.da
 import 'package:easy_bo_mobile_app/presentation/providers/monedas_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/pedidos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/theme_provider.dart';
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:easy_bo_mobile_app/services/supabase_service.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +42,7 @@ void main() async {
     if (!Hive.isAdapterRegistered(7)) Hive.registerAdapter(DocumentoAdapter());
     if (!Hive.isAdapterRegistered(8)) Hive.registerAdapter(MovimientoAdapter());
     if (!Hive.isAdapterRegistered(9)) Hive.registerAdapter(PedidoAdapter());
-    if (!Hive.isAdapterRegistered(10))
-      Hive.registerAdapter(DetallePedidoAdapter());
+    if (!Hive.isAdapterRegistered(10))Hive.registerAdapter(DetallePedidoAdapter());
 
     final localStorage = LocalStorageService();
     await localStorage.init();
@@ -57,14 +57,10 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ChangeNotifierProvider(
-        //   create: (_) => SupabaseProvider(),
-        // ),
         ChangeNotifierProvider(
           create:
               (_) => TiendasProvider(SupabaseService(SupabaseConfig.client)),
@@ -94,30 +90,19 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => PedidosProvider()..cargarPedidos(),
         ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp.router(
-        routerConfig: router,
-        debugShowCheckedModeBanner: false,
-        title: 'Easy BO',
-        theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // TRY THIS: Try running your application with "flutter run". You'll see
-          // the application has a purple toolbar. Then, without quitting the app,
-          // try changing the seedColor in the colorScheme below to Colors.green
-          // and then invoke "hot reload" (save your changes or press the "hot
-          // reload" button in a Flutter-supported IDE, or press "r" if you used
-          // the command line to start the app).
-          //
-          // Notice that the counter didn't reset back to zero; the application
-          // state is not lost during the reload. To reset the state, use hot
-          // restart instead.
-          //
-          // This works for code too, not just values: Most code changes can be
-          // tested with just a hot reload.
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        ),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp.router(
+            routerConfig: router,
+            title: 'Easy BO',
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

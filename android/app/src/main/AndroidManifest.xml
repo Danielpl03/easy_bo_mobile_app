@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
     <application
-        android:label="easy_bo_mobile_app"
+        android:label="Easy BO Mobile"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

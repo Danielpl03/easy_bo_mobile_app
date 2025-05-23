@@ -71,10 +71,19 @@ class TiendasProvider extends ChangeNotifier {
   void seleccionarTienda(Tienda tienda) {
     if (_tiendasSeleccionadas.contains(tienda)) {
       _tiendasSeleccionadas.remove(tienda);
+      // Deseleccionar todas las localidades de la tienda
+      _localidadesSeleccionadas.removeWhere(
+        (localidad) => localidad.idTienda == tienda.idTienda,
+      );
     } else {
       _tiendasSeleccionadas.add(tienda);
+      // Seleccionar todas las localidades de la tienda
+      _localidades.where((l) => l.idTienda == tienda.idTienda).forEach((localidad) {
+        if (!_localidadesSeleccionadas.contains(localidad)) {
+          _localidadesSeleccionadas.add(localidad);
+        }
+      });
     }
-    localidades.where( (l) => l.idTienda == tienda.idTienda ).forEach(seleccionarLocalidad);
     notifyListeners();
   }
 

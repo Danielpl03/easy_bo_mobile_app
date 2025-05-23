@@ -327,21 +327,21 @@ class _DocumentoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ExpansionTile(
         title: Row(
           children: [
             Text(
               DateFormat('h:mm').format(documento.fecha),
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
             if (documento.cancelado)
               Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Icon(Icons.cancel, color: Colors.red, size: 18),
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.cancel, color: theme.colorScheme.error, size: 18),
               ),
           ],
         ),
@@ -349,22 +349,23 @@ class _DocumentoTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             OrdenamientoMovimientosMenu(documento: documento),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   '\$${NumberFormat('#,##0.00', 'es_MX').format(documento.importe)}',
-                  style: TextStyle(
-                    color: documento.cancelado ? Colors.red : Colors.green,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: documento.cancelado ? theme.colorScheme.error : theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
                   ),
                 ),
                 if (documento.descuento != null && documento.descuento! > 0)
                   Text(
                     'Descuento: \$${NumberFormat('#,##0.00', 'es_MX').format(documento.descuento)}',
-                    style: TextStyle(color: Colors.orange[800], fontSize: 10),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error.withOpacity(0.8),
+                    ),
                   ),
               ],
             ),
@@ -390,18 +391,19 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
-      margin: EdgeInsets.all(8),
+      margin: const EdgeInsets.all(8),
       child: ExpansionTile(
         title: _buildHeader(),
         trailing: _buildTotal(),
         onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ListView.builder(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.grupo.documentos.length,
               itemBuilder: (context, index) {
                 final documento = widget.grupo.documentos[index];
@@ -415,20 +417,25 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
   }
 
   Widget _buildHeader() {
+    final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(Icons.store, color: Colors.blue, size: 20),
-        SizedBox(width: 8),
+        Icon(Icons.store, color: theme.colorScheme.primary, size: 20),
+        const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.grupo.nombreTienda,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               DateFormat('dd/MM/yyyy').format(widget.grupo.fecha),
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           ],
         ),
@@ -437,20 +444,20 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
   }
 
   Widget _buildTotal() {
+    final theme = Theme.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           '\$${NumberFormat('#,##0.00', 'es_MX').format(widget.grupo.total)}',
-          style: TextStyle(
-            fontSize: 16,
-            color: _expanded ? Colors.blue : Colors.black,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: _expanded ? theme.colorScheme.primary : theme.colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           '${widget.grupo.documentos.length} ventas',
-          style: TextStyle(fontSize: 12),
+          style: theme.textTheme.bodySmall,
         ),
       ],
     );
@@ -458,36 +465,50 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
 }
 
 Widget _buildMovimientoItem(Movimiento movimiento, Producto producto) {
-  return ListTile(
-    leading: Icon(Icons.shopping_basket, color: Colors.blue),
-    title: Text(producto.descripcion),
-    subtitle: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [Text('Código: ${producto.codigo ?? 'N/A'}')],
-    ),
-    trailing: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          '${movimiento.cantidad} x \$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.precioProducto)}',
-          style: TextStyle(fontSize: 12),
+  return Builder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      return ListTile(
+        leading: Icon(Icons.shopping_basket, color: theme.colorScheme.primary),
+        title: Text(
+          producto.descripcion,
+          style: theme.textTheme.bodyMedium,
         ),
-        if (movimiento.descuento != null && movimiento.descuento! > 0)
-          Text(
-            '-\$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.descuento!)}',
-            style: TextStyle(color: Colors.red, fontSize: 12),
-            textAlign: TextAlign.end,
-          ),
-        Text(
-          '\$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.importe ?? 0)}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.green[800],
-            fontSize: 14,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Código: ${producto.codigo ?? 'N/A'}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
         ),
-      ],
-    ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${movimiento.cantidad} x \$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.precioProducto)}',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (movimiento.descuento != null && movimiento.descuento! > 0)
+              Text(
+                '-\$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.descuento!)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+                textAlign: TextAlign.end,
+              ),
+            Text(
+              '\$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.importe ?? 0)}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }
 

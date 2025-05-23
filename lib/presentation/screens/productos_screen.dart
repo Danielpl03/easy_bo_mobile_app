@@ -401,22 +401,21 @@ void _mostrarDialogoCantidad(BuildContext context, Producto producto) {
     final localidadesSeleccionadas =
         context.watch<TiendasProvider>().localidadesSeleccionadas;
     final monedasProvider = context.watch<MonedasProvider>();
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Productos'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: theme.colorScheme.inversePrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/'),
         ),
         actions: [
-          // Botón de comparación de stocks
           IconButton(
             icon: const Icon(Icons.compare_arrows),
             onPressed: () => _mostrarDialogoComparacion(context),
           ),
-          // Botón de filtros
           IconButton(
             icon: Badge(
               isLabelVisible:
@@ -428,12 +427,6 @@ void _mostrarDialogoCantidad(BuildContext context, Producto producto) {
               _showFilterDialog(context, productosProvider);
             },
           ),
-          // IconButton(
-          //   icon: const Icon(Icons.add),
-          //   onPressed: () {
-          //     // TODO: Navegar a pantalla de creación
-          //   },
-          // ),
           IconButton(
             icon: const Icon(Icons.replay_sharp),
             onPressed: () {
@@ -462,126 +455,130 @@ void _mostrarDialogoCantidad(BuildContext context, Producto producto) {
           return Column(
             children: [
               estadoCargaP(productosProvider),
-              // Barra de búsqueda
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: SearchBar(productosProvider: productosProvider),
               ),
-              // Lista de productos
               Expanded(
                 child: ListView.builder(
                   itemCount: productosProvider.productosFiltrados.length,
                   itemBuilder: (context, index) {
                     final producto =
                         productosProvider.productosFiltrados[index];
-                    return ListTile(
-                      title: Text(producto.descripcion.toUpperCase()),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Código: ${producto.codigo ?? 'N/A'}'),
-                          if (producto.stocks.isNotEmpty)
-                            Consumer(
-                              builder: (context, ref, child) {
-                                return Wrap(
-                                  spacing: 8,
-                                  children:
-                                      localidadesSeleccionadas.map((localidad) {
-                                        final stock = producto.stocks
-                                            .firstWhere(
-                                              (s) =>
-                                                  s.idLocalidad ==
-                                                  localidad.idLocalidad,
-                                              orElse:
-                                                  () => Stock(
-                                                    idLocalidad:
-                                                        localidad.idLocalidad,
-                                                    idProducto:
-                                                        producto.idProducto,
-                                                    stock: 0,
-                                                    idStock: 0,
-                                                  ),
-                                            );
-
-                                        return Chip(
-                                          label: Text(
-                                            '${localidad.idLocalidad}: ${stock.stock}',
-                                            style: TextStyle(
-                                              color:
-                                                  stock.stock > 0
-                                                      ? Colors.green
-                                                      : Colors.red,
-                                            ),
-                                          ),
-                                          backgroundColor:
-                                              stock.stock > 0
-                                                  ? Colors.green.withValues(
-                                                    alpha: 0.1,
-                                                  )
-                                                  : Colors.red.withValues(
-                                                    alpha: 0.1,
-                                                  ),
-                                        );
-                                      }).toList(),
-                                );
-                              },
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: ListTile(
+                        title: Text(
+                          producto.descripcion.toUpperCase(),
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Código: ${producto.codigo ?? 'N/A'}',
+                              style: theme.textTheme.bodySmall,
                             ),
-                        ],
-                      ),
-
-                      trailing:
-                          monedasProvider.monedaSeleccionada == null
-                              ? const Text('Seleccione una moneda')
-                              : Consumer(
+                            if (producto.stocks.isNotEmpty)
+                              Consumer(
                                 builder: (context, ref, child) {
-                                  final precio = producto.precios.firstWhere(
-                                    (p) =>
-                                        p.idMoneda ==
-                                        monedasProvider
-                                            .monedaSeleccionada!
-                                            .idMoneda,
-                                    orElse:
-                                        () => Precio(
-                                          idPrecio: 0,
-                                          idProducto: producto.idProducto,
-                                          idMoneda:
-                                              monedasProvider
-                                                  .monedaSeleccionada!
-                                                  .idMoneda,
-                                          precio: 0,
-                                        ),
-                                  );
-                                  String precioFormateado = NumberFormat(
-                                    '#,##0.00',
-                                    'en_EN',
-                                  ).format(precio.precio);
-                                  return Text(
-                                    precio.precio > 0
-                                        ? '${monedasProvider.monedaSeleccionada!.siglas} $precioFormateado'
-                                        : 'No disponible',
-                                    textScaler: TextScaler.linear(1.2),
+                                  return Wrap(
+                                    spacing: 8,
+                                    children:
+                                        localidadesSeleccionadas.map((localidad) {
+                                          final stock = producto.stocks
+                                              .firstWhere(
+                                                (s) =>
+                                                    s.idLocalidad ==
+                                                    localidad.idLocalidad,
+                                                orElse:
+                                                    () => Stock(
+                                                      idLocalidad:
+                                                          localidad.idLocalidad,
+                                                      idProducto:
+                                                          producto.idProducto,
+                                                      stock: 0,
+                                                      idStock: 0,
+                                                    ),
+                                              );
+
+                                          return Chip(
+                                            label: Text(
+                                              '${localidad.idLocalidad}: ${stock.stock}',
+                                              style: TextStyle(
+                                                color:
+                                                    stock.stock > 0
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                              ),
+                                            ),
+                                            backgroundColor:
+                                                stock.stock > 0
+                                                    ? Colors.green.withOpacity(0.1)
+                                                    : Colors.red.withOpacity(0.1),
+                                          );
+                                        }).toList(),
                                   );
                                 },
                               ),
-                      onTap: () {
-                        Clipboard.setData(
-                          ClipboardData(
-                            text: producto.fullDescripction(precio: 1),
-                          ),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Info de producto copiado al portapapeles',
+                          ],
+                        ),
+                        trailing:
+                            monedasProvider.monedaSeleccionada == null
+                                ? const Text('Seleccione una moneda')
+                                : Consumer(
+                                  builder: (context, ref, child) {
+                                    final precio = producto.precios.firstWhere(
+                                      (p) =>
+                                          p.idMoneda ==
+                                          monedasProvider
+                                              .monedaSeleccionada!
+                                              .idMoneda,
+                                      orElse:
+                                          () => Precio(
+                                            idPrecio: 0,
+                                            idProducto: producto.idProducto,
+                                            idMoneda:
+                                                monedasProvider
+                                                    .monedaSeleccionada!
+                                                    .idMoneda,
+                                            precio: 0,
+                                          ),
+                                    );
+                                    String precioFormateado = NumberFormat(
+                                      '#,##0.00',
+                                      'en_EN',
+                                    ).format(precio.precio);
+                                    return Text(
+                                      precio.precio > 0
+                                          ? '${monedasProvider.monedaSeleccionada!.siglas} $precioFormateado'
+                                          : 'No disponible',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    );
+                                  },
+                                ),
+                        onTap: () {
+                          Clipboard.setData(
+                            ClipboardData(
+                              text: producto.fullDescripction(precio: 1),
                             ),
-                          ),
-                        );
-                      },
-                      onLongPress:
-                          () => _mostrarDialogoCantidad(
-                            context,
-                            producto,
-                          ),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Info de producto copiado al portapapeles',
+                              ),
+                            ),
+                          );
+                        },
+                        onLongPress:
+                            () => _mostrarDialogoCantidad(
+                              context,
+                              producto,
+                            ),
+                      ),
                     );
                   },
                 ),
