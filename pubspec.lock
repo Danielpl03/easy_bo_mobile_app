@@ -374,6 +374,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.1"
+<<<<<<< HEAD
   flutter_dotenv:
     dependency: "direct main"
     description:
@@ -382,6 +383,8 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.2.1"
+=======
+>>>>>>> a0ca7cb768a826dcde15bfb4216546fced8ddbc9
   flutter_launcher_icons:
     dependency: "direct dev"
     description:

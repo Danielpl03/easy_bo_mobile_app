@@ -10,6 +10,12 @@ class SupabaseConfig {
   static SupabaseClient? _authenticatedClient;
 
   static Future<void> initialize() async {
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    
+    // Initialize authenticated client for storage operations
+    _authenticatedClient = SupabaseClient(
+      supabaseUrl,
+      serviceRoleKey,
     // Load environment variables
     await dotenv.load();
     
@@ -28,6 +34,18 @@ class SupabaseConfig {
   }
 
   static SupabaseClient get client => Supabase.instance.client;
+
+  static SupabaseStorageClient get storageClient => client.storage;
+  
+  // Authenticated storage client using service role key for upload/delete operations
+  static SupabaseStorageClient get authenticatedStorageClient {
+    if (_authenticatedClient == null) {
+      throw Exception('Supabase not initialized. Call SupabaseConfig.initialize() first.');
+    }
+    return _authenticatedClient!.storage;
+  }
+}
+
 
   static SupabaseStorageClient get storageClient => client.storage;
   
