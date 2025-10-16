@@ -1,7 +1,6 @@
 import 'package:easy_bo_mobile_app/models/detalle_pedido.dart';
 import 'package:easy_bo_mobile_app/models/mensaje.dart' show Mensaje, TipoMensaje;
 import 'package:easy_bo_mobile_app/models/pedido.dart';
-import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;

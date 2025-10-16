@@ -58,6 +58,7 @@ class Producto {
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
+    print(json);
     return Producto(
       idProducto: json['id_producto'] as int,
       descripcion: json['descripcion'] as String,
@@ -89,18 +90,19 @@ class Producto {
     };
   }
 
-  String fullDescripction({int precio = 0, bool inversed = false}) {
+  String fullDescripction({int precio = 0, bool inversed = false, bool uppercase = true}) {
     String d = '';
     if (inversed) {
-      d = codigo != null ? ('$codigo ${descripcion.toUpperCase()}') : descripcion.toUpperCase();
+      d = codigo != null ? ('$codigo $descripcion') : descripcion;
     } else {
-      d = codigo != null ? ('${descripcion.toUpperCase()} -${codigo!}') : (descripcion.toUpperCase());
+      d = codigo != null ? ('$descripcion -${codigo!}') : (descripcion);
     }
 
     if(precio > 0){
       final precioP = precios.firstWhere( (p) => p.idMoneda == precio, orElse: () => Precio(idPrecio: 0, idProducto: 0, idMoneda: 0, precio: 0) );
       d = precioP.idPrecio > 0 ? ('$d  \$${precioP.precio}' ) : d;
     }
+    if(uppercase) return d.toUpperCase();
     return d;
   }
 }

@@ -1,8 +1,8 @@
-import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/ventas_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
 import 'package:flutter/material.dart';
 
-Widget estadoCargaV(DocumentosProvider provider) {
+Widget estadoCargaV(VentasProvider provider) {
   return AnimatedSwitcher(
     duration: Duration(milliseconds: 300),
     child:

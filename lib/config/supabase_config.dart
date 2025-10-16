@@ -1,15 +1,41 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
-  static const String supabaseUrl = 'https://xymgsntzhkygkbutltty.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5bWdzbnR6aGt5Z2tidXRsdHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI2NjMzODQsImV4cCI6MjA0ODIzOTM4NH0.kKouuGA2AB71K0uESlpb9F2jEMQAO1sz5_y3lnt-CD0';
+  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  static String get imagesSupabase => dotenv.env['SUPABASE_STORAGE_URL'] ?? '';
+  static String get serviceRoleKey => dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
+  static SupabaseClient? _authenticatedClient;
 
   static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
+    // Load environment variables
+    await dotenv.load();
+    
+    // Validate that all required environment variables are present
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty || serviceRoleKey.isEmpty) {
+      throw Exception('Missing required Supabase environment variables. Please check your .env file.');
+    }
+    
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    
+    // Initialize authenticated client for storage operations
+    _authenticatedClient = SupabaseClient(
+      supabaseUrl,
+      serviceRoleKey,
     );
   }
 
   static SupabaseClient get client => Supabase.instance.client;
-} 
+
+  static SupabaseStorageClient get storageClient => client.storage;
+  
+  // Authenticated storage client using service role key for upload/delete operations
+  static SupabaseStorageClient get authenticatedStorageClient {
+    if (_authenticatedClient == null) {
+      throw Exception('Supabase not initialized. Call SupabaseConfig.initialize() first.');
+    }
+    return _authenticatedClient!.storage;
+  }
+}

@@ -54,6 +54,7 @@ class Movimiento {
     required this.espejo,
     required this.idDocumento,
     this.descuento,
+    this.producto
   });
 
   factory Movimiento.fromJson(Map<String, dynamic> json) {
@@ -69,6 +70,7 @@ class Movimiento {
       espejo: json['espejo'],
       idDocumento: json['id_documento'],
       descuento: json['descuento'],
+      producto: json['producto']
     );
   }
 

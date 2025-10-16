@@ -1,5 +1,5 @@
 import 'package:easy_bo_mobile_app/models/documento.dart';
-import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/ventas_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +10,7 @@ class OrdenamientoMovimientosMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<DocumentosProvider>();
+    final provider = context.watch<VentasProvider>();
     final ordenActual = provider.getOrdenMov(documento.idDocumento) ?? OrdenMovimientos.alfabetico;
 
     return PopupMenuButton<OrdenMovimientos>(

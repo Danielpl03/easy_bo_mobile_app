@@ -1,6 +1,6 @@
 // [file name]: pedidos_screen.dart (Versión mejorada)
 import 'package:easy_bo_mobile_app/models/mensaje.dart'
-    show Mensaje, TipoMensaje;
+    show TipoMensaje;
 import 'package:easy_bo_mobile_app/models/pedido.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/pedidos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
@@ -29,7 +29,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tiendasProvider = context.read<TiendasProvider>();
+    final _ = context.read<TiendasProvider>();
     final theme = Theme.of(context);
 
     return Scaffold(

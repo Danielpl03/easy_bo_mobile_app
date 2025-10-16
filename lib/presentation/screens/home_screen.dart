@@ -1,7 +1,7 @@
+import 'package:easy_bo_mobile_app/models/mensaje.dart' show TipoMensaje;
 import 'package:easy_bo_mobile_app/models/tienda.dart';
 import 'package:easy_bo_mobile_app/models/localidad.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
-import 'package:easy_bo_mobile_app/presentation/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -31,44 +31,52 @@ class HomeScreen extends StatelessWidget {
                     child: Text(
                       "Seleccionar Tiendas y Localidades",
                       style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.clip
+                      overflow: TextOverflow.clip,
                     ),
                   ),
                 ],
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Tiendas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...tiendasProvider.tiendas.map((tienda) {
-                      return _buildStoreItem(tienda, tiendasProvider, setDialogState);
-                    }),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Localidades',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...tiendasProvider.localidades
-                        .where((localidad) => tiendasProvider.tiendasSeleccionadas
-                            .any((tienda) => tienda.idTienda == localidad.idTienda))
-                        .map((localidad) {
-                      return _buildLocalidadItem(localidad, tiendasProvider, setDialogState);
-                    }),
-                  ],
-                ),
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize:
+                    MainAxisSize
+                        .min, // Importante para que el Column no intente ocupar todo el espacio
+                children: [
+                  const Text(
+                    'Tiendas',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  ...tiendasProvider.tiendas.map((tienda) {
+                    return _buildStoreItem(
+                      tienda,
+                      tiendasProvider,
+                      setDialogState,
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Localidades',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  ...tiendasProvider.localidades
+                      .where(
+                        (localidad) => tiendasProvider.tiendasSeleccionadas.any(
+                          (tienda) => tienda.idTienda == localidad.idTienda,
+                        ),
+                      )
+                      .map((localidad) {
+                        return _buildLocalidadItem(
+                          localidad,
+                          tiendasProvider,
+                          setDialogState,
+                        );
+                      }),
+                ],
               ),
+              scrollable:
+                  true, // Habilita el scroll para el contenido del AlertDialog
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -85,7 +93,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStoreItem(Tienda tienda, TiendasProvider provider, StateSetter setDialogState) {
+  Widget _buildStoreItem(
+    Tienda tienda,
+    TiendasProvider provider,
+    StateSetter setDialogState,
+  ) {
     return ListTile(
       leading: Icon(Icons.storefront, color: Colors.grey[700]),
       title: Text(tienda.nombre, style: const TextStyle(fontSize: 16)),
@@ -95,9 +107,7 @@ class HomeScreen extends StatelessWidget {
           provider.seleccionarTienda(tienda);
           setDialogState(() {});
         },
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       onTap: () {
         provider.seleccionarTienda(tienda);
@@ -106,7 +116,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLocalidadItem(Localidad localidad, TiendasProvider provider, StateSetter setDialogState) {
+  Widget _buildLocalidadItem(
+    Localidad localidad,
+    TiendasProvider provider,
+    StateSetter setDialogState,
+  ) {
     return ListTile(
       leading: Icon(Icons.location_on, color: Colors.grey[700]),
       title: Text(localidad.localidad, style: const TextStyle(fontSize: 16)),
@@ -122,9 +136,7 @@ class HomeScreen extends StatelessWidget {
           provider.seleccionarLocalidad(localidad);
           setDialogState(() {});
         },
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       onTap: () {
         provider.seleccionarLocalidad(localidad);
@@ -139,69 +151,109 @@ class HomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            Icon(Icons.apps_rounded, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Easy BO', style: TextStyle(color: Colors.white)),
+            DrawerHeader(
+              decoration: BoxDecoration(color: theme.primaryColor),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.apps_rounded, color: Colors.white, size: 40),
+                  SizedBox(height: 10),
+                  Text(
+                    'Easy BO',
+                    style: TextStyle(color: Colors.white, fontSize: 24),
+                  ),
+                  Text(
+                    'M&L SOLUCIONES',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Ajustes'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ajustes');
+              },
+            ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              context.watch<ThemeProvider>().isDarkMode 
-                ? Icons.light_mode 
-                : Icons.dark_mode,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              context.read<ThemeProvider>().toggleTheme();
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Text(
-              'M&L SOLUCIONES',
-              style: TextStyle(color: Colors.white, fontSize: 18),
-            ),
-          ),
-        ],
+      ),
+      appBar: AppBar(
+        leading: Builder(
+          builder:
+              (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  Scaffold.of(context).openDrawer();
+                },
+              ),
+        ),
+        title: const Row(
+          children: [Text('Easy BO', style: TextStyle(color: Colors.white))],
+        ),
+        actions: [],
         backgroundColor: theme.primaryColor,
         elevation: 3,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildStoreSelectorCard(context, tiendasProvider),
-            const SizedBox(height: 24),
-            _buildNavigationButton(
-              context: context,
-              icon: Icons.inventory_2,
-              label: 'Gestión de Productos',
-              route: '/productos',
-              color: Colors.blueAccent,
+      body: Consumer<TiendasProvider>(
+        builder: (context, provider, _) {
+          if (provider.message != null &&
+              provider.message!.tipoMensaje != TipoMensaje.loading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(provider.message!.mensaje),
+                  backgroundColor:
+                      provider.message!.tipoMensaje == TipoMensaje.error
+                          ? Colors.red
+                          : Colors.green,
+                ),
+              );
+              provider.clearMensaje();
+            });
+          }
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildStoreSelectorCard(context, tiendasProvider),
+                  const SizedBox(height: 24),
+                  _buildNavigationButton(
+                    context: context,
+                    icon: Icons.inventory_2,
+                    label: 'Gestión de Productos',
+                    route: '/productos',
+                    color: Colors.blueAccent,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNavigationButton(
+                    context: context,
+                    icon: Icons.receipt_long,
+                    label: 'Historial de Ventas',
+                    route: '/ventas',
+                    color: Colors.green,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNavigationButton(
+                    context: context,
+                    icon: Icons.shopping_cart,
+                    label: 'Gestión de pedidos',
+                    route: '/pedidos',
+                    color: Colors.orange,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildNavigationButton(
-              context: context,
-              icon: Icons.receipt_long,
-              label: 'Historial de Ventas',
-              route: '/ventas',
-              color: Colors.green,
-            ),
-            const SizedBox(height: 16),
-            _buildNavigationButton(
-              context: context,
-              icon: Icons.shopping_cart,
-              label: 'Gestión de pedidos',
-              route: '/pedidos',
-              color: Colors.orange,
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -233,49 +285,48 @@ class HomeScreen extends StatelessWidget {
             if (provider.tiendasSeleccionadas.isNotEmpty) ...[
               const Text(
                 'Tiendas:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: provider.tiendasSeleccionadas.map((tienda) {
-                  return InputChip(
-                    label: Text(tienda.nombre),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => provider.seleccionarTienda(tienda),
-                    backgroundColor: Colors.blue.withOpacity(0.1),
-                    labelStyle: const TextStyle(color: Colors.blue),
-                  );
-                }).toList(),
+                children:
+                    provider.tiendasSeleccionadas.map((tienda) {
+                      return InputChip(
+                        label: Text(tienda.nombre),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: () => provider.seleccionarTienda(tienda),
+                        backgroundColor: Colors.blue.withOpacity(0.1),
+                        labelStyle: const TextStyle(color: Colors.blue),
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Localidades:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: provider.localidadesSeleccionadas.map((localidad) {
-                  final tienda = provider.tiendas.firstWhere(
-                    (t) => t.idTienda == localidad.idTienda,
-                  );
-                  return InputChip(
-                    label: Text('${localidad.localidad} (${tienda.nombre})'),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => provider.seleccionarLocalidad(localidad),
-                    backgroundColor: Colors.green.withOpacity(0.1),
-                    labelStyle: const TextStyle(color: Colors.green),
-                  );
-                }).toList(),
+                children:
+                    provider.localidadesSeleccionadas.map((localidad) {
+                      final tienda = provider.tiendas.firstWhere(
+                        (t) => t.idTienda == localidad.idTienda,
+                      );
+                      return InputChip(
+                        label: Text(
+                          '${localidad.localidad} (${tienda.nombre})',
+                        ),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted:
+                            () => provider.seleccionarLocalidad(localidad),
+                        backgroundColor: Colors.green.withOpacity(0.1),
+                        labelStyle: const TextStyle(color: Colors.green),
+                      );
+                    }).toList(),
               ),
             ],
             const SizedBox(height: 12),
