@@ -1,0 +1,490 @@
+{
+  "fechaI": "Jul 29, 2025, 11:59:00 PM",
+  "fechaF": "Jul 30, 2025, 11:59:59 PM",
+  "documentoDTOS": [
+    {
+      "idDocumento": "CQ1-344",
+      "fecha": "Jul 30, 2025, 9:38:12 AM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 660.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 344,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144702,
+          "idProducto": 3307,
+          "idDocumento": "CQ1-344",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 660.0,
+          "importe": 660.0,
+          "descuento": 0.0,
+          "saldoProducto": 13,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-345",
+      "fecha": "Jul 30, 2025, 10:10:25 AM",
+      "tipo": "MODIFICADO",
+      "razon": "PRODUCTO MODIFICADO",
+      "comentario": "1020.0",
+      "importe": 0.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 345,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144703,
+          "idProducto": 360,
+          "idDocumento": "CQ1-345",
+          "cantidad": 0,
+          "precio_producto": 800.0,
+          "importe": 0.0,
+          "descuento": 0.0,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-346",
+      "fecha": "Jul 30, 2025, 10:26:34 AM",
+      "tipo": "ENTRADA",
+      "razon": "M\u0026L SOLUCIONES",
+      "idLocalidad": 103,
+      "importe": 373040.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 346,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144704,
+          "idProducto": 651,
+          "idDocumento": "CQ1-346",
+          "cantidad": 2,
+          "precio_producto": 136000.0,
+          "importe": 272000.0,
+          "descuento": 0.0,
+          "saldoProducto": 3,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144707,
+          "idProducto": 3391,
+          "idDocumento": "CQ1-346",
+          "cantidad": 1,
+          "precio_producto": 32000.0,
+          "importe": 32000.0,
+          "descuento": 0.0,
+          "saldoProducto": 2,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144706,
+          "idProducto": 3392,
+          "idDocumento": "CQ1-346",
+          "cantidad": 2,
+          "precio_producto": 32000.0,
+          "importe": 64000.0,
+          "descuento": 0.0,
+          "saldoProducto": 2,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144705,
+          "idProducto": 3367,
+          "idDocumento": "CQ1-346",
+          "cantidad": 6,
+          "precio_producto": 840.0,
+          "importe": 5040.0,
+          "descuento": 0.0,
+          "saldoProducto": 9,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-347",
+      "fecha": "Jul 30, 2025, 10:44:56 AM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 2400.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 347,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144708,
+          "idProducto": 1867,
+          "idDocumento": "CQ1-347",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 2400.0,
+          "importe": 2400.0,
+          "descuento": 0.0,
+          "saldoProducto": 10,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-348",
+      "fecha": "Jul 30, 2025, 10:52:24 AM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 4800.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 348,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144709,
+          "idProducto": 2650,
+          "idDocumento": "CQ1-348",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 4800.0,
+          "importe": 4800.0,
+          "descuento": 0.0,
+          "saldoProducto": 1,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-349",
+      "fecha": "Jul 30, 2025, 11:13:21 AM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 500.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 349,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144710,
+          "idProducto": 3296,
+          "idDocumento": "CQ1-349",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 500.0,
+          "importe": 500.0,
+          "descuento": 0.0,
+          "saldoProducto": 20,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-350",
+      "fecha": "Jul 30, 2025, 11:29:23 AM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 4460.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 350,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144711,
+          "idProducto": 681,
+          "idDocumento": "CQ1-350",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 4460.0,
+          "importe": 4460.0,
+          "descuento": 0.0,
+          "saldoProducto": 1,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-351",
+      "fecha": "Jul 30, 2025, 12:12:48 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 2060.0,
+      "descuento": 415.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 351,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144713,
+          "idProducto": 551,
+          "idDocumento": "CQ1-351",
+          "cantidad": 1,
+          "idDescuento": 4,
+          "idPago": 1,
+          "precio_producto": 2075.0,
+          "importe": 1660.0,
+          "descuento": 415.0,
+          "saldoProducto": 25,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144712,
+          "idProducto": 121,
+          "idDocumento": "CQ1-351",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 400.0,
+          "importe": 400.0,
+          "descuento": 0.0,
+          "saldoProducto": 18,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-352",
+      "fecha": "Jul 30, 2025, 12:16:08 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 3980.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 352,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144714,
+          "idProducto": 2614,
+          "idDocumento": "CQ1-352",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 1020.0,
+          "importe": 1020.0,
+          "descuento": 0.0,
+          "saldoProducto": 26,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144716,
+          "idProducto": 2610,
+          "idDocumento": "CQ1-352",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 2160.0,
+          "importe": 2160.0,
+          "descuento": 0.0,
+          "saldoProducto": 1,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144715,
+          "idProducto": 360,
+          "idDocumento": "CQ1-352",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 800.0,
+          "importe": 800.0,
+          "descuento": 0.0,
+          "saldoProducto": 97,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-353",
+      "fecha": "Jul 30, 2025, 12:18:41 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 5600.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 353,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144717,
+          "idProducto": 2308,
+          "idDocumento": "CQ1-353",
+          "cantidad": 2,
+          "idPago": 1,
+          "precio_producto": 1200.0,
+          "importe": 2400.0,
+          "descuento": 0.0,
+          "saldoProducto": 36,
+          "espejo": false
+        },
+        {
+          "idMovimiento": 144718,
+          "idProducto": 413,
+          "idDocumento": "CQ1-353",
+          "cantidad": 2,
+          "idPago": 1,
+          "precio_producto": 1600.0,
+          "importe": 3200.0,
+          "descuento": 0.0,
+          "saldoProducto": 17,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-354",
+      "fecha": "Jul 30, 2025, 12:19:15 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 400.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 354,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144719,
+          "idProducto": 2782,
+          "idDocumento": "CQ1-354",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 400.0,
+          "importe": 400.0,
+          "descuento": 0.0,
+          "saldoProducto": 12,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-355",
+      "fecha": "Jul 30, 2025, 12:38:06 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 720.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 355,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144720,
+          "idProducto": 158,
+          "idDocumento": "CQ1-355",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 720.0,
+          "importe": 720.0,
+          "descuento": 0.0,
+          "saldoProducto": 6,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-356",
+      "fecha": "Jul 30, 2025, 1:22:32 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 9600.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 356,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144721,
+          "idProducto": 538,
+          "idDocumento": "CQ1-356",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 9600.0,
+          "importe": 9600.0,
+          "descuento": 0.0,
+          "saldoProducto": 8,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    },
+    {
+      "idDocumento": "CQ1-357",
+      "fecha": "Jul 30, 2025, 1:35:09 PM",
+      "tipo": "VENTA",
+      "razon": "VENTA EN CAJA",
+      "comentario": "",
+      "idLocalidad": 103,
+      "importe": 2860.0,
+      "descuento": 0.0,
+      "idSistema": 1002,
+      "idUsuario": 10003,
+      "consec": 357,
+      "cancelado": false,
+      "movimientos": [
+        {
+          "idMovimiento": 144722,
+          "idProducto": 2416,
+          "idDocumento": "CQ1-357",
+          "cantidad": 1,
+          "idPago": 1,
+          "precio_producto": 2860.0,
+          "importe": 2860.0,
+          "descuento": 0.0,
+          "saldoProducto": 59,
+          "espejo": false
+        }
+      ],
+      "flujosCajas": []
+    }
+  ],
+  "flujosCajaDTOS": []
+}

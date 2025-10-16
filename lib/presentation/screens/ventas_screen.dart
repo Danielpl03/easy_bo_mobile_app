@@ -1,8 +1,9 @@
 import 'package:easy_bo_mobile_app/models/documento.dart';
 import 'package:easy_bo_mobile_app/models/movimiento.dart';
 import 'package:easy_bo_mobile_app/models/producto.dart';
-import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
-import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/monedas_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/ventas_provider.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/flujo_caja_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/widgets/estado_carga.dart';
 import 'package:easy_bo_mobile_app/presentation/widgets/ordenamiento_movimientos_menu.dart';
 import 'package:easy_bo_mobile_app/presentation/widgets/ordenamiento_ventas_menu.dart';
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
@@ -28,6 +28,17 @@ extension CancelFutureExtension on Future {
 }
 
 class _VentasScreenState extends State<VentasScreen> {
+  // DateTime? _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<VentasProvider>().getVentas(tipo: 'VENTA');
+      context.read<FlujoCajaProvider>().getFlujos();
+    });
+  }
+
   @override
   void dispose() {
     // context.read<DocumentosProvider>().cancelPendingRequest();
@@ -44,7 +55,7 @@ class _VentasScreenState extends State<VentasScreen> {
 
   void showFilterDialog(
     BuildContext context,
-    DocumentosProvider documentosProvider,
+    VentasProvider documentosProvider,
   ) {
     showDialog(
       context: context,
@@ -140,45 +151,65 @@ class _VentasScreenState extends State<VentasScreen> {
           // ),
         ],
       ),
-      body: Consumer<DocumentosProvider>(
-        builder: (context, provider, _) {
-          if (provider.errorMessage != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(provider.errorMessage!),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              provider.clearError();
-            });
-          }
-          return RefreshIndicator(
-            onRefresh: () => provider.getDocumentos(tipo: 'VENTA'),
-            child: Column(
-              children: [
-                estadoCargaV(provider),
-                RangoFechasSelector(),
-                ResumenTiendas(),
-                Expanded(child: _buildListaDocumentos()),
-              ],
+      body: Column(
+        children: [
+          Expanded(
+            child: Consumer<VentasProvider>(
+              builder: (context, provider, _) {
+                if (provider.errorMessage != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(provider.errorMessage!),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    provider.clearError();
+                  });
+                }
+                final monedasProvider = context.watch<MonedasProvider>();
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    provider.getVentas(tipo: 'VENTA');
+                    context.read<FlujoCajaProvider>().getFlujos();
+                  },
+                  child: Column(
+                    children: [
+                      estadoCargaV(provider),
+                      RangoFechasSelector(),
+                      ExpansionTile(
+                        title: Text('Resumen de Ingresos por Tienda'),
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.4, // Ajusta la altura máxima según sea necesario
+                            ),
+                            child: SingleChildScrollView(
+                              child: ResumenTiendas(monedasProvider: monedasProvider),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Expanded(child: _buildListaDocumentos()),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 }
-
-
 
 Widget _buildMovementsList(
   Documento documento,
   ThemeData theme,
   BuildContext context,
 ) {
-  final productos = context.read<ProductosProvider>().productos;
-  return Consumer<DocumentosProvider>(
+  // final productos = context.read<ProductosProvider>().productos;
+  return Consumer<VentasProvider>(
     builder: (context, provider, _) {
       final movimientosOrdenados = provider.movimientosOrdenados(documento);
 
@@ -211,18 +242,15 @@ Widget _buildMovementsList(
       return Column(
         children:
             movimientosOrdenados.map((movimiento) {
-              final producto = productos.firstWhere(
-                (p) => p.idProducto == movimiento.idProducto,
-                orElse:
-                    () => Producto(
-                      idProducto: 0,
-                      descripcion: 'Producto no disponible',
-                      idDepartamento: 0,
-                      ipv: false,
-                      activo: false,
-                      combo: false,
-                      web: false,
-                    ),
+              Producto? producto = movimiento.producto;
+              producto ??= Producto(
+                idProducto: 0,
+                descripcion: 'Producto no disponible',
+                idDepartamento: 0,
+                ipv: false,
+                activo: false,
+                combo: false,
+                web: false,
               );
               return _buildMovimientoItem(movimiento, producto);
             }).toList(),
@@ -341,7 +369,11 @@ class _DocumentoTile extends StatelessWidget {
             if (documento.cancelado)
               Padding(
                 padding: const EdgeInsets.only(left: 8),
-                child: Icon(Icons.cancel, color: theme.colorScheme.error, size: 18),
+                child: Icon(
+                  Icons.cancel,
+                  color: theme.colorScheme.error,
+                  size: 18,
+                ),
               ),
           ],
         ),
@@ -356,7 +388,10 @@ class _DocumentoTile extends StatelessWidget {
                 Text(
                   '\$${NumberFormat('#,##0.00', 'es_MX').format(documento.importe)}',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: documento.cancelado ? theme.colorScheme.error : theme.colorScheme.primary,
+                    color:
+                        documento.cancelado
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -378,7 +413,7 @@ class _DocumentoTile extends StatelessWidget {
 }
 
 class _GrupoDocumentosTile extends StatefulWidget {
-  final GrupoDocumentos grupo;
+  final GrupoVentas grupo;
 
   const _GrupoDocumentosTile({required this.grupo});
 
@@ -391,7 +426,6 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.all(8),
       child: ExpansionTile(
@@ -404,9 +438,9 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.grupo.documentos.length,
+              itemCount: widget.grupo.ventas.length,
               itemBuilder: (context, index) {
-                final documento = widget.grupo.documentos[index];
+                final documento = widget.grupo.ventas[index];
                 return _DocumentoTile(documento: documento);
               },
             ),
@@ -451,12 +485,15 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
         Text(
           '\$${NumberFormat('#,##0.00', 'es_MX').format(widget.grupo.total)}',
           style: theme.textTheme.titleMedium?.copyWith(
-            color: _expanded ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+            color:
+                _expanded
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
-          '${widget.grupo.documentos.length} ventas',
+          '${widget.grupo.ventas.length} ventas',
           style: theme.textTheme.bodySmall,
         ),
       ],
@@ -470,10 +507,7 @@ Widget _buildMovimientoItem(Movimiento movimiento, Producto producto) {
       final theme = Theme.of(context);
       return ListTile(
         leading: Icon(Icons.shopping_basket, color: theme.colorScheme.primary),
-        title: Text(
-          producto.descripcion,
-          style: theme.textTheme.bodyMedium,
-        ),
+        title: Text(producto.descripcion, style: theme.textTheme.bodyMedium),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -513,18 +547,26 @@ Widget _buildMovimientoItem(Movimiento movimiento, Producto producto) {
 }
 
 Widget _buildListaDocumentos() {
-  return Consumer<DocumentosProvider>(
+  return Consumer<VentasProvider>(
     builder: (context, provider, _) {
-      if (provider.documentos.isEmpty) {
-        return Center(child: CircularProgressIndicator());
+      if (provider.ventas.isEmpty) {
+        if (provider.cargando) {
+          return Center(child: CircularProgressIndicator());
+        }
+        return Center(
+          child: Text(
+            "No hay ventas para este rango de fechas",
+            style: TextStyle(color: const Color.fromARGB(255, 207, 64, 54)),
+            textAlign: TextAlign.center,
+          ),
+        );
       }
 
       return ListView.builder(
-        itemCount: provider.documentosAgrupados.length,
+        itemCount: provider.ventasAgrupadas.length,
         itemBuilder:
-            (context, index) => _GrupoDocumentosTile(
-              grupo: provider.documentosAgrupados[index],
-            ),
+            (context, index) =>
+                _GrupoDocumentosTile(grupo: provider.ventasAgrupadas[index]),
       );
     },
   );

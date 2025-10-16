@@ -69,7 +69,7 @@ class Documento {
   });
 
   factory Documento.fromJson(Map<String, dynamic> json) {
-    return Documento(
+    final doc = Documento(
       consec: json['consec'] as int,
       fecha: DateTime.parse(json['fecha'] as String),
       tipo: json['tipo'] as String,
@@ -85,6 +85,7 @@ class Documento {
       idDocumento: json['id_documento'] as String,
       cancelado: json['cancelado'] as bool,
     );
+        return doc;
   }
 
   Map<String, dynamic> toJson() {

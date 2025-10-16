@@ -1,0 +1,244 @@
+  -- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.categorias (
+  id_categoria integer NOT NULL DEFAULT nextval('categorias_id'::regclass),
+  id_departamento integer NOT NULL,
+  nombre text NOT NULL,
+  CONSTRAINT categorias_pkey PRIMARY KEY (id_categoria),
+  CONSTRAINT id_departamento_departamento FOREIGN KEY (id_departamento) REFERENCES public.departamentos(id_departamento)
+);
+CREATE TABLE public.combos (
+  id_combo integer NOT NULL,
+  id_producto integer NOT NULL,
+  id_producto_linked integer NOT NULL,
+  cantidad integer NOT NULL,
+  CONSTRAINT combos_pkey PRIMARY KEY (id_combo),
+  CONSTRAINT id_producto_producto FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto),
+  CONSTRAINT id_producto_linked_producto FOREIGN KEY (id_producto_linked) REFERENCES public.productos(id_producto)
+);
+CREATE TABLE public.departamentos (
+  id_departamento integer NOT NULL,
+  departamento text NOT NULL,
+  id_descuento integer,
+  CONSTRAINT departamentos_pkey PRIMARY KEY (id_departamento),
+  CONSTRAINT id_descuento_descuento FOREIGN KEY (id_descuento) REFERENCES public.descuentos(id_descuento)
+);
+CREATE TABLE public.descuentos (
+  id_descuento integer NOT NULL DEFAULT nextval('descuentos_id'::regclass),
+  valor real NOT NULL,
+  nombre text NOT NULL DEFAULT '11'::text,
+  color integer DEFAULT 0,
+  activo boolean NOT NULL DEFAULT true,
+  CONSTRAINT descuentos_pkey PRIMARY KEY (id_descuento)
+);
+CREATE TABLE public.descuentos_pagos (
+  id_relacion integer NOT NULL DEFAULT nextval('descuentos_pagos_id'::regclass),
+  id_pago integer NOT NULL,
+  id_descuento integer NOT NULL,
+  CONSTRAINT descuentos_pagos_pkey PRIMARY KEY (id_relacion),
+  CONSTRAINT id_descuento_descuento FOREIGN KEY (id_descuento) REFERENCES public.descuentos(id_descuento),
+  CONSTRAINT id_pago_pago FOREIGN KEY (id_pago) REFERENCES public.pagos(id_pago)
+);
+CREATE TABLE public.descuentos_productos (
+  id_relacion integer NOT NULL DEFAULT nextval('descuentos_productos_id'::regclass),
+  id_descuento integer NOT NULL,
+  id_producto integer NOT NULL,
+  CONSTRAINT descuentos_productos_pkey PRIMARY KEY (id_relacion),
+  CONSTRAINT id_producto_producto FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto),
+  CONSTRAINT id_descuento_descuento FOREIGN KEY (id_descuento) REFERENCES public.descuentos(id_descuento)
+);
+CREATE TABLE public.documentos (
+  consec integer NOT NULL,
+  fecha timestamp without time zone NOT NULL,
+  tipo text NOT NULL,
+  razon text NOT NULL,
+  comentario text,
+  id_localidad integer,
+  importe real NOT NULL DEFAULT '-1'::integer,
+  descuento real,
+  id_sistema integer NOT NULL DEFAULT 1001,
+  id_usuario integer NOT NULL DEFAULT 10001,
+  cambio real NOT NULL DEFAULT 0,
+  id_localidad_destino integer,
+  id_documento text NOT NULL,
+  cancelado boolean NOT NULL DEFAULT false,
+  CONSTRAINT documentos_pkey PRIMARY KEY (id_documento),
+  CONSTRAINT documentos_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id_usuario),
+  CONSTRAINT id_localidad_localidad FOREIGN KEY (id_localidad) REFERENCES public.localidades(id_localidad),
+  CONSTRAINT id_sistema_sistema FOREIGN KEY (id_sistema) REFERENCES public.sistemas(id_sistema),
+  CONSTRAINT documentos_id_localidad_destino_fkey FOREIGN KEY (id_localidad_destino) REFERENCES public.localidades(id_localidad)
+);
+CREATE TABLE public.documentos_pendientes (
+  consec integer NOT NULL,
+  fecha timestamp without time zone NOT NULL,
+  tipo text NOT NULL,
+  razon text NOT NULL,
+  comentario text,
+  id_localidad integer,
+  importe real NOT NULL DEFAULT '-1'::integer,
+  descuento real,
+  id_sistema integer NOT NULL DEFAULT 1001,
+  id_usuario integer NOT NULL DEFAULT 10001,
+  cambio real NOT NULL DEFAULT 0,
+  id_localidad_destino integer,
+  id_documento text NOT NULL,
+  cancelado boolean NOT NULL DEFAULT false,
+  CONSTRAINT documentos_pendientes_pkey PRIMARY KEY (id_documento),
+  CONSTRAINT documentos_pendientes_id_localidad_destino_fkey FOREIGN KEY (id_localidad_destino) REFERENCES public.localidades(id_localidad),
+  CONSTRAINT id_sistema_sistema FOREIGN KEY (id_sistema) REFERENCES public.sistemas(id_sistema),
+  CONSTRAINT id_localidad_localidad FOREIGN KEY (id_localidad) REFERENCES public.localidades(id_localidad),
+  CONSTRAINT documentos_pendientes_id_usuario_fkey FOREIGN KEY (id_usuario) REFERENCES public.usuarios(id_usuario)
+);
+CREATE TABLE public.etiquetas (
+  id_etiqueta integer NOT NULL DEFAULT nextval('etiquetas_id'::regclass),
+  nombre text NOT NULL,
+  color integer DEFAULT 0,
+  ficha_tecnica boolean DEFAULT false,
+  CONSTRAINT etiquetas_pkey PRIMARY KEY (id_etiqueta)
+);
+CREATE TABLE public.etiquetas_productos (
+  id_etiqueta integer NOT NULL,
+  id_producto integer NOT NULL,
+  id_relacion integer NOT NULL DEFAULT nextval('etiquetas_productos_id'::regclass),
+  valor text,
+  CONSTRAINT etiquetas_productos_pkey PRIMARY KEY (id_relacion),
+  CONSTRAINT id_etiqueta_etiqueta FOREIGN KEY (id_etiqueta) REFERENCES public.etiquetas(id_etiqueta),
+  CONSTRAINT id_producto_producto FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto)
+);
+CREATE TABLE public.flujos_caja (
+  id_flujo integer NOT NULL DEFAULT nextval('flujos_id'::regclass),
+  tipo text NOT NULL,
+  motivo text NOT NULL,
+  importe real NOT NULL,
+  fecha timestamp without time zone NOT NULL,
+  forma_pago integer NOT NULL,
+  id_documento text,
+  monto real,
+  id_localidad integer NOT NULL,
+  id_sistema integer NOT NULL,
+  CONSTRAINT flujos_caja_pkey PRIMARY KEY (id_flujo),
+  CONSTRAINT fk_k6rf1tfbm4s58kuta4v7lgle FOREIGN KEY (id_sistema) REFERENCES public.sistemas(id_sistema),
+  CONSTRAINT flujos_caja_id_documento_fkey FOREIGN KEY (id_documento) REFERENCES public.documentos(id_documento),
+  CONSTRAINT fk_kwd43vgb0r8bijk2go8v6x1dx FOREIGN KEY (id_localidad) REFERENCES public.localidades(id_localidad),
+  CONSTRAINT flujos_caja_forma_pago_fkey FOREIGN KEY (forma_pago) REFERENCES public.pagos(id_pago)
+);
+CREATE TABLE public.localidades (
+  id_localidad integer NOT NULL,
+  localidad text NOT NULL,
+  id_tienda integer NOT NULL DEFAULT 1001,
+  tipo text,
+  CONSTRAINT localidades_pkey PRIMARY KEY (id_localidad),
+  CONSTRAINT id_tienda_tienda FOREIGN KEY (id_tienda) REFERENCES public.tiendas(id_tienda)
+);
+CREATE TABLE public.monedas (
+  id_moneda integer NOT NULL,
+  nombre text NOT NULL,
+  siglas text NOT NULL,
+  por_defecto boolean NOT NULL,
+  taza_cambio real NOT NULL,
+  CONSTRAINT monedas_pkey PRIMARY KEY (id_moneda)
+);
+CREATE TABLE public.movimientos (
+  id_movimiento integer NOT NULL DEFAULT nextval('movimientos_id'::regclass),
+  id_producto integer,
+  cantidad integer NOT NULL,
+  precio_producto real NOT NULL DEFAULT '-1'::integer,
+  id_descuento integer,
+  id_pago integer,
+  importe real DEFAULT '-1'::integer,
+  saldo_producto integer,
+  espejo boolean NOT NULL DEFAULT false,
+  id_documento text NOT NULL,
+  descuento real,
+  CONSTRAINT movimientos_pkey PRIMARY KEY (id_movimiento),
+  CONSTRAINT movimientos_id_documento_fkey FOREIGN KEY (id_documento) REFERENCES public.documentos(id_documento),
+  CONSTRAINT id_descuento_descuento FOREIGN KEY (id_descuento) REFERENCES public.descuentos(id_descuento),
+  CONSTRAINT id_pago_pago FOREIGN KEY (id_pago) REFERENCES public.pagos(id_pago),
+  CONSTRAINT movimientos_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto)
+);
+CREATE TABLE public.movimientos_pendientes (
+  id_movimiento integer NOT NULL DEFAULT nextval('movimientos_pendientes_id'::regclass),
+  id_producto integer,
+  cantidad integer NOT NULL,
+  precio_producto real NOT NULL DEFAULT '-1'::integer,
+  id_descuento integer,
+  id_pago integer,
+  importe real DEFAULT '-1'::integer,
+  saldo_producto integer,
+  espejo boolean NOT NULL DEFAULT false,
+  id_documento text NOT NULL,
+  descuento real,
+  CONSTRAINT movimientos_pendientes_pkey PRIMARY KEY (id_movimiento),
+  CONSTRAINT id_pago_pago FOREIGN KEY (id_pago) REFERENCES public.pagos(id_pago),
+  CONSTRAINT movimientos_pendientes_id_documento_fkey FOREIGN KEY (id_documento) REFERENCES public.documentos_pendientes(id_documento),
+  CONSTRAINT id_producto_producto FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto),
+  CONSTRAINT id_descuento_descuento FOREIGN KEY (id_descuento) REFERENCES public.descuentos(id_descuento)
+);
+CREATE TABLE public.pagos (
+  id_pago integer NOT NULL,
+  tipo_pago text NOT NULL,
+  id_moneda integer NOT NULL DEFAULT 101,
+  efectivo boolean NOT NULL DEFAULT true,
+  CONSTRAINT pagos_pkey PRIMARY KEY (id_pago),
+  CONSTRAINT pagos_id_moneda_fkey FOREIGN KEY (id_moneda) REFERENCES public.monedas(id_moneda)
+);
+CREATE TABLE public.precios (
+  id_precio integer NOT NULL DEFAULT nextval('precios_id'::regclass),
+  id_producto integer NOT NULL,
+  id_moneda integer NOT NULL,
+  precio real NOT NULL,
+  CONSTRAINT precios_pkey PRIMARY KEY (id_precio),
+  CONSTRAINT precios_id_producto_fkey FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto),
+  CONSTRAINT precios_id_moneda_fkey FOREIGN KEY (id_moneda) REFERENCES public.monedas(id_moneda)
+);
+CREATE TABLE public.productos (
+  id_producto integer NOT NULL DEFAULT nextval('productos_id'::regclass),
+  descripcion text NOT NULL,
+  codigo text UNIQUE,
+  precio real,
+  id_departamento integer NOT NULL DEFAULT 1,
+  ipv boolean NOT NULL DEFAULT true,
+  id_categoria integer,
+  activo boolean NOT NULL DEFAULT true,
+  barcode text UNIQUE,
+  costo real,
+  combo boolean NOT NULL DEFAULT false,
+  web boolean,
+  CONSTRAINT productos_pkey PRIMARY KEY (id_producto),
+  CONSTRAINT id_departamento_depatamento FOREIGN KEY (id_departamento) REFERENCES public.departamentos(id_departamento),
+  CONSTRAINT id_categoria_categoria FOREIGN KEY (id_categoria) REFERENCES public.categorias(id_categoria)
+);
+CREATE TABLE public.sistemas (
+  id_sistema integer NOT NULL,
+  nombre text NOT NULL,
+  tipo text NOT NULL,
+  id_localidad integer,
+  codigo text NOT NULL,
+  CONSTRAINT sistemas_pkey PRIMARY KEY (id_sistema),
+  CONSTRAINT id_localidad_localidad FOREIGN KEY (id_localidad) REFERENCES public.localidades(id_localidad)
+);
+CREATE TABLE public.stocks (
+  id_localidad integer NOT NULL,
+  id_producto integer NOT NULL,
+  stock integer NOT NULL,
+  id_stock integer NOT NULL DEFAULT nextval('stocks_id'::regclass),
+  CONSTRAINT stocks_pkey PRIMARY KEY (id_localidad, id_producto),
+  CONSTRAINT id_localidad_localidad FOREIGN KEY (id_localidad) REFERENCES public.localidades(id_localidad),
+  CONSTRAINT id_producto_producto FOREIGN KEY (id_producto) REFERENCES public.productos(id_producto)
+);
+CREATE TABLE public.tiendas (
+  id_tienda integer NOT NULL,
+  nombre text NOT NULL UNIQUE,
+  direccion text,
+  coordenadas text,
+  telefono text,
+  CONSTRAINT tiendas_pkey PRIMARY KEY (id_tienda)
+);
+CREATE TABLE public.usuarios (
+  id_usuario integer NOT NULL,
+  nombre text NOT NULL,
+  password text NOT NULL,
+  rol text NOT NULL,
+  CONSTRAINT usuarios_pkey PRIMARY KEY (id_usuario)
+);

@@ -48,4 +48,8 @@ class MonedasProvider extends ChangeNotifier {
   Future<void> updateMonedas(List<Moneda> monedas) async {
     _localStorageService.saveMonedas(monedas);
   }
+
+  Moneda getMoneda(int idMoneda){
+    return _monedas.firstWhere( (m) => m.idMoneda == idMoneda);
+  }
 }

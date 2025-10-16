@@ -3,10 +3,9 @@ import 'dart:io';
 
 import 'package:easy_bo_mobile_app/config/supabase_config.dart';
 import 'package:easy_bo_mobile_app/models/documento.dart';
-import 'package:easy_bo_mobile_app/models/localidad.dart';
 import 'package:easy_bo_mobile_app/models/movimiento.dart';
-import 'package:easy_bo_mobile_app/models/pago.dart';
-import 'package:easy_bo_mobile_app/models/tienda.dart';
+import 'package:easy_bo_mobile_app/models/movimiento_historial.dart';
+import 'package:easy_bo_mobile_app/models/rango_fechas.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:easy_bo_mobile_app/services/supabase_service.dart';
@@ -14,36 +13,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Filtros {
-  String? tipo;
-  Pago? pago;
-  bool includeCanceled = false;
   DateTimeRange? rangoFechas;
-  bool colapsed = false;
+  List<int> localidadesSeleccionadas = [];
 }
-
-class GrupoDocumentos {
-  final DateTime fecha;
-  final int idTienda;
-  final String nombreTienda;
-  final List<Documento> documentos;
-  double get total => documentos.fold(0, (sum, doc) => sum + doc.importe);
-
-  GrupoDocumentos({
-    required this.fecha,
-    required this.idTienda,
-    required this.nombreTienda,
-    required this.documentos,
-  });
-}
-
-enum OrdenVentas { fecha, tienda, importe }
-
-enum OrdenMovimientos { alfabetico, importe, cantidad }
 
 class DocumentosProvider extends ChangeNotifier {
-  bool _isDisposed = false;
-  Future? _pendingRequest;
-
   final SupabaseService _supabaseService = SupabaseService(
     SupabaseConfig.client,
   );
@@ -53,10 +27,35 @@ class DocumentosProvider extends ChangeNotifier {
   final Filtros _filtros = Filtros();
   Filtros get filtros => _filtros;
 
-  void setIncludeCanceled({bool include = false}) {
-    _filtros.includeCanceled = include;
-    filtrarDocumentos();
-    actualizarEstado();
+  bool _isDisposed = false;
+  bool _cargando = false;
+  String? _errorMessage;
+  Future? _pendingRequest;
+
+  List<Documento> _documentos = [];
+  List<Documento> _documentosFiltrados = [];
+  List<MovimientoHistorial> _movimientosHistorial = [];
+
+  bool get cargando => _cargando;
+  String? get errorMessage => _errorMessage;
+  List<Documento> get documentos => _documentos;
+  List<Documento> get documentosFiltrados => _documentosFiltrados;
+  List<MovimientoHistorial> get movimientosHistorial => _movimientosHistorial;
+
+  DocumentosProvider(this.tiendasProvider) {
+    _inicializarFiltros();
+    // unawaited(getDocumentos());
+  }
+
+  void _inicializarFiltros() {
+    final ahora = DateTime.now();
+    _filtros.rangoFechas = DateTimeRange(
+      start: DateTime(ahora.year, ahora.month, 1),
+      end: DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59),
+    );
+    print(
+      '📅 [Provider] Filtros inicializados con rango: ${_filtros.rangoFechas!.start} - ${_filtros.rangoFechas!.end}',
+    );
   }
 
   @override
@@ -73,127 +72,59 @@ class DocumentosProvider extends ChangeNotifier {
     }
   }
 
-  List<Documento> _documentos = [];
-  List<Documento> _documentosFiltrados = [];
-  List<Documento> get documentos => _documentos;
-  List<Documento> get documentosFiltrados => _documentosFiltrados;
-
-  final List<Movimiento> _movimientos = [];
-  List<Movimiento> get movimientos => _movimientos;
-
-  OrdenVentas _ordenVentas = OrdenVentas.fecha;
-  OrdenVentas get ordenVentas => _ordenVentas;
-  final Map<String, OrdenMovimientos> _ordenMovimientos = {};
-
-  String? _errorMessage;
-  bool _cargando = false;
-
-  String? get errorMessage => _errorMessage;
-  bool get cargando => _cargando;
-
-  OrdenMovimientos? getOrdenMov(String doc) => _ordenMovimientos[doc];
-
-  // Métodos para cambiar el orden
-  void cambiarOrdenVentas(OrdenVentas nuevoOrden) {
-    _ordenVentas = nuevoOrden;
-    actualizarEstado();
-  }
-
-  void cambiarOrdenMovimientos(
-    String idDocumento,
-    OrdenMovimientos nuevoOrden,
-  ) {
-    _ordenMovimientos[idDocumento] = nuevoOrden;
-    actualizarEstado();
-  }
-
-  DocumentosProvider(this.tiendasProvider) {
-    // Obtener fecha actual
-    final ahora = DateTime.now();
-
-    // Calcular inicio de la semana (lunes)
-    final inicioSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
-
-    // Calcular fin de la semana (domingo)
-    final finSemana = inicioSemana.add(Duration(days: 6));
-
-    setRangoFechas(
-      DateTimeRange(
-        start: DateTime(
-          inicioSemana.year,
-          inicioSemana.month,
-          inicioSemana.day,
-        ),
-        end: DateTime(
-          finSemana.year,
-          finSemana.month,
-          finSemana.day,
-          23,
-          59,
-          59,
-        ),
-      ),
-    );
-
-    getDocumentos(tipo: 'VENTA');
-  }
-
   Future<void> setRangoFechas(DateTimeRange? nuevoRango) async {
-    _filtros.rangoFechas = nuevoRango;
+    if (nuevoRango == null) {
+      _inicializarFiltros();
+    } else {
+      // Validar que el rango no sea futuro
+      final ahora = DateTime.now();
+      if (nuevoRango.start.isAfter(ahora)) {
+        print('⚠️ [Provider] Intento de establecer rango futuro');
+        return;
+      }
 
-    await getDocumentos(tipo: 'VENTA');
-    actualizarEstado();
+      // Ajustar la fecha fin si es necesario
+      final fechaFin =
+          nuevoRango.end.isAfter(ahora)
+              ? DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59)
+              : DateTime(
+                nuevoRango.end.year,
+                nuevoRango.end.month,
+                nuevoRango.end.day,
+                23,
+                59,
+                59,
+              );
+
+      _filtros.rangoFechas = DateTimeRange(
+        start: nuevoRango.start,
+        end: fechaFin,
+      );
+      print(
+        '📅 [Provider] Nuevo rango establecido: ${_filtros.rangoFechas!.start} - ${_filtros.rangoFechas!.end}',
+      );
+    }
+    // await getDocumentos(forceUpdate: true);
   }
 
-  Future<void> cargarDesdeLocal() async {
-    final documentosLocales = await _localStorageService.getDocumentos();
-    final movimientosLocales = await _localStorageService.getMovimientos();
-
-    _documentos = enrichDocuments(documentosLocales, movimientosLocales);
-    aplicarFiltros();
-  }
-
-  void aplicarFiltros() {
-    _documentosFiltrados =
-        _documentos.where((doc) {
-          final enRango =
-              _filtros.rangoFechas!.start.isBefore(doc.fecha) &&
-              _filtros.rangoFechas!.end.isAfter(doc.fecha);
-          return enRango && !doc.cancelado;
-        }).toList();
-  }
-
-  Future<void> actualizarDesdeRemoto() async {
-    final documentosRemotos = await _supabaseService.getDocumentos(
-      tipo: 'VENTA',
-      start: _filtros.rangoFechas?.start,
-      end: _filtros.rangoFechas?.end,
-    );
-
-    final movimientosRemotos = await _supabaseService.getMovimientosByDocuments(
-      documentosRemotos,
-    );
-
-    // Actualizar estado
-    _documentos = enrichDocuments(documentosRemotos, movimientosRemotos);
-
-    // Guardar en local
-    unawaited(updateDocumentos(_documentos));
-
+  void setLocalidadesSeleccionadas(List<int> localidades) {
+    _filtros.localidadesSeleccionadas = localidades;
     filtrarDocumentos();
-  }
-
-  void _mostrarError(String mensaje) {
-    _errorMessage = mensaje;
     actualizarEstado();
   }
 
-  void clearError() {
-    _errorMessage = null;
-    actualizarEstado();
-  }
+  Future<void> getDocumentos({bool forceUpdate = false}) async {
+    print('🔄 [Provider] Iniciando getDocumentos (forceUpdate: $forceUpdate)');
+    if (_filtros.rangoFechas == null) {
+      print('❌ [Provider] No hay rango de fechas definido');
+      return;
+    }
 
-  Future<void> getDocumentos({bool forceUpdate = false, String? tipo}) async {
+    print(
+      '📅 [Provider] Rango de fechas solicitado: ${_filtros.rangoFechas!.start} - ${_filtros.rangoFechas!.end}',
+    );
+
+    // Cancelar cualquier solicitud pendiente
     cancelPendingRequest();
     final completer = Completer();
     _pendingRequest = completer.future;
@@ -202,181 +133,249 @@ class DocumentosProvider extends ChangeNotifier {
       _errorMessage = null;
       _cargando = true;
       actualizarEstado();
-      if (!forceUpdate) {
-        cargarDesdeLocal();
-        filtrarDocumentos();
-        actualizarEstado();
+
+      print('🔍 [Provider] Obteniendo rangos de fechas faltantes...');
+      final rangosFaltantes = await _localStorageService.getRangosFaltantes(
+        _filtros.rangoFechas!,
+      );
+
+      print(
+        '📅 [Provider] Rangos faltantes encontrados: ${rangosFaltantes.length}',
+      );
+      for (var rango in rangosFaltantes) {
+        print('  - ${rango.start} a ${rango.end}');
       }
-      await actualizarDesdeRemoto();
+
+      if (rangosFaltantes.isNotEmpty) {
+        await actualizarDesdeRemoto(rangosFaltantes);
+      }
+
+      // Cargar datos locales una sola vez
+      print('📥 [Provider] Cargando datos locales...');
+      await cargarDesdeLocal();
+      print(
+        '📥 [Provider] Datos locales cargados: ${_documentos.length} documentos',
+      );
+
+      // Filtrar documentos
+      filtrarDocumentos();
+      print(
+        '🔍 [Provider] Documentos filtrados: ${_documentosFiltrados.length}',
+      );
+      actualizarEstado();
     } on SocketException catch (_) {
+      print('❌ [Provider] Error de conexión');
       _mostrarError('Sin conexión - Mostrando datos locales');
     } on PostgrestException catch (e) {
+      print('❌ [Provider] Error en Supabase: ${e.message}');
       _mostrarError('Error en Supabase: ${e.message}');
     } finally {
       _cargando = false;
       if (!completer.isCompleted) completer.complete();
       actualizarEstado();
+      print('✅ [Provider] getDocumentos completado');
     }
   }
 
-  void actualizarEstado() {
-    if (!_isDisposed) notifyListeners();
+  Future<void> cargarDesdeLocal() async {
+    final documentosLocales = await _localStorageService.getDocumentos();
+    final movimientosLocales = await _localStorageService.getMovimientos();
+
+    final docFiltrados = filtrarPorFecha(documentosLocales);
+
+    _documentos = _enriquecerDocumentos(docFiltrados, movimientosLocales);
   }
 
-  List<Documento> enrichDocuments(
+  Future<void> actualizarDesdeRemoto(
+    List<DateTimeRange> rangosFaltantes,
+  ) async {
+    // Obtener los rangos de fechas que faltan
+    List<Documento> documentosRemotos = [];
+    List<Movimiento> movimientosRemotos = [];
+
+    // Obtener documentos solo para los rangos faltantes
+    for (var rango in rangosFaltantes) {
+      print(
+        '📥 [Provider] Obteniendo documentos para rango: ${rango.start} - ${rango.end}',
+      );
+      final docs = await _supabaseService.getDocumentos(
+        start: rango.start,
+        end: rango.end,
+      );
+      print(
+        '📥 [Provider] Documentos obtenidos para este rango: ${docs.length}',
+      );
+      documentosRemotos.addAll(docs);
+    }
+
+    if (documentosRemotos.isNotEmpty) {
+      print(
+        '📥 [Provider] Obteniendo movimientos para ${documentosRemotos.length} documentos...',
+      );
+      movimientosRemotos = await _supabaseService.getMovimientosByDocuments(
+        documentosRemotos,
+      );
+      print(
+        '📥 [Provider] Movimientos obtenidos: ${movimientosRemotos.length}',
+      );
+
+      // Actualizar estado
+      // _documentos = _enriquecerDocumentos(
+      //   documentosRemotos,
+      //   movimientosRemotos,
+      // );
+      // print('📦 [Provider] Documentos enriquecidos: ${_documentos.length}');
+
+      // Guardar en local
+      print('💾 [Provider] Guardando datos en local...');
+      await _guardarEnLocal(documentosRemotos, movimientosRemotos);
+
+      // Registrar los nuevos rangos de fechas (meses completos)
+      if (rangosFaltantes.isNotEmpty) {
+        for (var rangoFaltante in rangosFaltantes) {
+          print(
+            '📅 [Provider] Registrando nuevo rango de fechas: ${rangoFaltante.start} - ${rangoFaltante.end}',
+          );
+          _localStorageService.agregarRangoFechas(
+            RangoFechas(inicio: rangoFaltante.start, fin: rangoFaltante.end),
+          );
+        }
+      }
+    } else {
+      print('ℹ️ [Provider] No se encontraron documentos nuevos para obtener');
+    }
+    print('✅ [Provider] Actualización desde remoto completada');
+  }
+
+  Future<void> _guardarEnLocal(
+    List<Documento> documentos,
+    List<Movimiento> movimientos,
+  ) async {
+    await _localStorageService.saveDocumentos(documentos);
+    await _localStorageService.saveMovimientos(movimientos);
+  }
+
+  List<Documento> _enriquecerDocumentos(
     List<Documento> documentos,
     List<Movimiento> movimientos,
   ) {
-    for (Documento d in documentos) {
-      for (Movimiento m in movimientos) {
-        if (d.idDocumento == m.idDocumento) {
-          // m.producto = _getProductoById(m.idProducto); // Nueva función
-          d.movimientos.add(m);
-        }
+    final Map<String, List<Movimiento>> movimientosPorDocumento = {};
+
+    for (final movimiento in movimientos) {
+      movimientosPorDocumento
+          .putIfAbsent(movimiento.idDocumento, () => [])
+          .add(movimiento);
+    }
+
+    for (Documento doc in documentos) {
+      if (movimientosPorDocumento.containsKey(doc.idDocumento)) {
+        doc.movimientos.addAll(movimientosPorDocumento[doc.idDocumento]!);
       }
     }
     return documentos;
   }
 
-  Future<void> updateDocumentos(List<Documento> documentos) async {
-    unawaited(_localStorageService.saveDocumentos(documentos));
-    final List<Movimiento> moves = [];
-    for (Documento documento in documentos) {
-      print('${documento.idDocumento}: ${documento.movimientos}');
-      moves.addAll(documento.movimientos);
-    }
-    print('${movimientos.length}: $moves');
-    unawaited(updateMovimientos(moves));
-  }
+  List<Documento> filtrarPorFecha(List<Documento> documentos) {
+    return documentos.where((doc) {
+      if (_filtros.rangoFechas == null) {
+        print('❌ No hay rango de fechas definido');
+        return false;
+      }
 
-  Future<void> updateMovimientos(List<Movimiento> movimientos) async {
-    _localStorageService.saveMovimientos(movimientos);
+      final enRango =
+          doc.fecha.isAfter(_filtros.rangoFechas!.start) &&
+          doc.fecha.isBefore(_filtros.rangoFechas!.end);
+
+      return enRango;
+    }).toList();
   }
 
   void filtrarDocumentos() {
-    _documentosFiltrados.clear();
-    _documentosFiltrados.addAll(_documentos);
+    print('🔍 Iniciando filtrado de documentos');
+    print('📊 Total documentos antes de filtrar: ${_documentos.length}');
 
-    if (_filtros.tipo != null) {
-      _documentosFiltrados =
-          documentosFiltrados.where((d) => d.tipo == _filtros.tipo).toList();
-    }
-    // if ( _filtros.pago != null ){
-    //   _documentosFiltrados = documentosFiltrados.where( (d) =>
-    //     d == _filtros.pago
-    //    ).toList();
-    // }
-    if (!_filtros.includeCanceled) {
-      _documentosFiltrados =
-          documentosFiltrados.where((d) => !d.cancelado).toList();
-    }
+    _documentosFiltrados =
+        _documentos.where((doc) {
+          // if (_filtros.rangoFechas == null) {
+          //   print('❌ No hay rango de fechas definido');
+          //   return false;
+          // }
 
-    _documentosFiltrados = _documentosFiltrados.reversed.toList();
+          // final enRango =
+          //     doc.fecha.isAfter(_filtros.rangoFechas!.start) &&
+          //     doc.fecha.isBefore(_filtros.rangoFechas!.end);
+
+          // if (!enRango) return false;
+
+          if (_filtros.localidadesSeleccionadas.isNotEmpty) {
+            final cumpleFiltro =
+                _filtros.localidadesSeleccionadas.contains(doc.idLocalidad) ||
+                doc.tipo == 'CREADO' ||
+                doc.tipo == 'MODIFICADO';
+            return cumpleFiltro;
+          }
+
+          return true;
+        }).toList();
+    print('📊 Documentos después de filtrar: ${_documentosFiltrados.length}');
+    print('✅ Filtrado completado');
   }
 
-  bool fechasIguales(DateTime fecha1, DateTime fecha2) {
-    if (fecha1.year != fecha2.year) return false;
-    if (fecha1.month != fecha2.month) return false;
-    if (fecha1.day != fecha2.day) return false;
+  Future<void> actualizarMovimientosHistorial(int idProducto) async {
+    print(
+      '🔄 [Provider] Iniciando actualización de movimientos historial para producto: $idProducto',
+    );
+    _movimientosHistorial.clear();
 
-    return true;
-  }
+    // Asegurarnos de que tenemos los datos actualizados
+    await getDocumentos(forceUpdate: true);
 
-  List<GrupoDocumentos> get documentosAgrupados {
-    final Map<String, GrupoDocumentos> grupos = {};
-
-    for (final doc in _documentosFiltrados) {
-      final tienda = _getTiendaPorLocalidad(doc.idLocalidad);
-      final key =
-          '${doc.fecha.toIso8601String().substring(0, 10)}-${tienda.idTienda}';
-
-      if (grupos.containsKey(key)) {
-        grupos[key]!.documentos.add(doc);
-      } else {
-        grupos[key] = GrupoDocumentos(
-          fecha: DateTime(doc.fecha.year, doc.fecha.month, doc.fecha.day),
-          idTienda: tienda.idTienda,
-          nombreTienda: tienda.nombre,
-          documentos: [doc],
-        );
-      }
-    }
-
-    return grupos.values.toList()..sort((a, b) {
-      switch (_ordenVentas) {
-        case OrdenVentas.fecha:
-          return b.fecha.compareTo(a.fecha);
-        case OrdenVentas.tienda:
-          return a.nombreTienda.compareTo(b.nombreTienda);
-        case OrdenVentas.importe:
-          return b.total.compareTo(a.total);
-      }
-    });
-    // return grupos.values.toList()..sort((a, b) => b.fecha.compareTo(a.fecha));
-  }
-
-  Map<String, double> get resumenPorTienda {
-    final Map<int, double> totales = {};
-
-    for (final doc in _documentosFiltrados) {
-      final tienda = _getTiendaPorLocalidad(doc.idLocalidad);
-      final total = totales[tienda.idTienda] ?? 0;
-      totales[tienda.idTienda] = total + doc.importe;
-    }
-
-    final Map<String, double> resumen = {};
-    for (final entry in totales.entries) {
-      final tienda = tiendasProvider.tiendas.firstWhere(
-        (t) => t.idTienda == entry.key,
-        orElse: () => Tienda(idTienda: 0, nombre: 'Otras Tiendas'),
-      );
-      resumen[tienda.nombre] = entry.value;
-    }
-
-    return resumen;
-  }
-
-  List<Movimiento> movimientosOrdenados(Documento doc) {
-    final orden =
-        _ordenMovimientos[doc.idDocumento] ?? OrdenMovimientos.alfabetico;
-
-    return doc.movimientos..sort((a, b) {
-      switch (orden) {
-        case OrdenMovimientos.alfabetico:
-          return a.producto?.descripcion.compareTo(
-                b.producto?.descripcion ?? '',
-              ) ??
-              0;
-        case OrdenMovimientos.importe:
-          return (b.importe ?? 0).compareTo(a.importe ?? 0);
-        case OrdenMovimientos.cantidad:
-          return b.cantidad.compareTo(a.cantidad);
-      }
-    });
-  }
-
-  Tienda _getTiendaPorLocalidad(int? idLocalidad) {
-    final localidad = tiendasProvider.localidades.firstWhere(
-      (l) => l.idLocalidad == idLocalidad,
-      orElse:
-          () => Localidad(
-            idLocalidad: 0,
-            localidad: 'Desconocida',
-            idTienda: 0,
-            tipo: '',
-          ),
+    print('🔍 [Provider] Filtrando movimientos para el producto $idProducto');
+    print(
+      '📅 [Provider] Rango de fechas actual: ${_filtros.rangoFechas?.start} - ${_filtros.rangoFechas?.end}',
+    );
+    print(
+      '🏪 [Provider] Localidades seleccionadas: ${_filtros.localidadesSeleccionadas}',
     );
 
-    return tiendasProvider.tiendas.firstWhere(
-      (t) => t.idTienda == localidad.idTienda,
-      orElse:
-          () => Tienda(
-            idTienda: 0,
-            nombre: 'Tienda Desconocida',
-            direccion: '',
-            coordenadas: '',
-            telefono: '',
-          ),
+    final Set<int> movimientosProcesados = {};
+    final List<MovimientoHistorial> tempMovimientosHistorial = [];
+
+    for (var doc in _documentosFiltrados) {
+      for (var movimiento in doc.movimientos) {
+        if (movimiento.idProducto == idProducto &&
+            !movimientosProcesados.contains(movimiento.idMovimiento)) {
+          tempMovimientosHistorial.add(
+            MovimientoHistorial.fromMovimiento(movimiento, doc),
+          );
+          movimientosProcesados.add(movimiento.idMovimiento);
+        }
+      }
+    }
+
+    _movimientosHistorial = tempMovimientosHistorial;
+
+    print('📊 [Provider] Movimientos encontrados: ${_movimientosHistorial.length}');
+    print(
+      '📊 [Provider] Movimientos únicos procesados: ${movimientosProcesados.length}',
     );
+
+    _movimientosHistorial.sort(
+      (a, b) => b.documento.fecha.compareTo(a.documento.fecha),
+    );
+
+    actualizarEstado();
+    print('✅ [Provider] Actualización de movimientos historial completada');
+  }
+
+  void _mostrarError(String mensaje) {
+    _errorMessage = mensaje;
+    actualizarEstado();
+  }
+
+  void actualizarEstado() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 }
