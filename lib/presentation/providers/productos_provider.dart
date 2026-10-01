@@ -14,6 +14,8 @@ import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart'
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:easy_bo_mobile_app/services/supabase_service.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:path/path.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 class Filtros {
@@ -80,10 +82,15 @@ class ProductosProvider extends ChangeNotifier {
   final List<Departamento> departamentos = [];
   final List<Categoria> categorias = [];
 
-  final TiendasProvider tiendasProvider;
+  TiendasProvider tiendasProvider;
 
   ProductosProvider(this.tiendasProvider) {
     getProductos(forceUpdate: false);
+  }
+
+  /// Mantiene la referencia al TiendasProvider del árbol de providers.
+  void updateDependencies(TiendasProvider tiendas) {
+    tiendasProvider = tiendas;
   }
 
   List<Categoria> get categoriasVisibles {
@@ -220,9 +227,7 @@ class ProductosProvider extends ChangeNotifier {
       _aplicarCatalogos(departamentosRemotos, categoriasRemotas);
 
       if (departamentosRemotos.isNotEmpty) {
-        unawaited(
-          _localStorageService.saveDepartamentos(departamentosRemotos),
-        );
+        unawaited(_localStorageService.saveDepartamentos(departamentosRemotos));
       }
       if (categoriasRemotas.isNotEmpty) {
         unawaited(_localStorageService.saveCategorias(categoriasRemotas));
@@ -379,13 +384,14 @@ class ProductosProvider extends ChangeNotifier {
           productos
               .where(
                 (p) =>
-                    p.descripcion.toLowerCase().contains(
-                      filtros.search.toLowerCase(),
-                    ) ||
-                    (p.codigo != null &&
-                        p.codigo!.toLowerCase().contains(
+                    filtros.search.isEmpty ||
+                    (p.descripcion.toLowerCase().contains(
                           filtros.search.toLowerCase(),
-                        )),
+                        ) ||
+                        (p.codigo != null &&
+                            p.codigo!.toLowerCase().contains(
+                              filtros.search.toLowerCase(),
+                            ))),
               )
               .toList();
       this.productosFiltrados.clear();
@@ -423,36 +429,36 @@ class ProductosProvider extends ChangeNotifier {
     }
 
     if (filtros.conStock != null || filtros.filtroPersonalizado) {
+      final localidadesSeleccionadas =
+          tiendasProvider.localidadesSeleccionadas
+              .map((e) => e.idLocalidad)
+              .toList();
+
+      bool stockEnLocalidadesRelevantes(Stock s) {
+        // Sin localidades seleccionadas: considera cualquier localidad
+        if (localidadesSeleccionadas.isEmpty) return true;
+        return localidadesSeleccionadas.contains(s.idLocalidad);
+      }
+
       if (filtros.filtroPersonalizado &&
           filtros.cantidadPersonalizada != null) {
-        List<int> localidadesSeleccionadas =
-            tiendasProvider.localidadesSeleccionadas
-                .map((e) => e.idLocalidad)
-                .toList();
         final productosFiltrados =
             this.productosFiltrados
                 .where(
                   (p) =>
                       p.stocks.isNotEmpty &&
                       p.stocks.any((s) {
-                        if (!localidadesSeleccionadas.contains(s.idLocalidad)) {
-                          return false;
-                        }
+                        if (!stockEnLocalidadesRelevantes(s)) return false;
                         if (filtros.mayorQue) {
                           return s.stock > filtros.cantidadPersonalizada!;
-                        } else {
-                          return s.stock < filtros.cantidadPersonalizada!;
                         }
+                        return s.stock < filtros.cantidadPersonalizada!;
                       }),
                 )
                 .toList();
         this.productosFiltrados.clear();
         this.productosFiltrados.addAll(productosFiltrados);
       } else if (filtros.conStock == true) {
-        List<int> localidadesSeleccionadas =
-            tiendasProvider.localidadesSeleccionadas
-                .map((e) => e.idLocalidad)
-                .toList();
         final productosFiltrados =
             this.productosFiltrados
                 .where(
@@ -460,20 +466,24 @@ class ProductosProvider extends ChangeNotifier {
                       p.stocks.isNotEmpty &&
                       p.stocks.any(
                         (s) =>
-                            localidadesSeleccionadas.contains(s.idLocalidad) &&
-                            s.stock > 0,
+                            stockEnLocalidadesRelevantes(s) && s.stock > 0,
                       ),
                 )
                 .toList();
         this.productosFiltrados.clear();
         this.productosFiltrados.addAll(productosFiltrados);
       } else if (filtros.conStock == false) {
+        // Sin stock en las localidades seleccionadas (o en todas si no hay selección)
         final productosFiltrados =
             this.productosFiltrados
-                .where(
-                  (p) =>
-                      p.stocks.isEmpty || p.stocks.every((s) => s.stock <= 0),
-                )
+                .where((p) {
+                  final stocksRelevantes =
+                      p.stocks
+                          .where(stockEnLocalidadesRelevantes)
+                          .toList();
+                  return stocksRelevantes.isEmpty ||
+                      stocksRelevantes.every((s) => s.stock <= 0);
+                })
                 .toList();
         this.productosFiltrados.clear();
         this.productosFiltrados.addAll(productosFiltrados);
@@ -618,9 +628,7 @@ class ProductosProvider extends ChangeNotifier {
   ) async {
     final preciosExistentes = await _localStorageService.getPrecios();
     final preciosProducto =
-        preciosExistentes
-            .where((p) => p.idProducto == idProducto)
-            .toList();
+        preciosExistentes.where((p) => p.idProducto == idProducto).toList();
 
     final preciosAEnviar = <Precio>[];
     for (final entry in preciosPorMoneda.entries) {
@@ -647,11 +655,14 @@ class ProductosProvider extends ChangeNotifier {
 
     if (preciosAEnviar.isEmpty) return [];
 
-    final preciosGuardados = await _supabaseService.upsertPrecios(preciosAEnviar);
+    final preciosGuardados = await _supabaseService.upsertPrecios(
+      preciosAEnviar,
+    );
 
     for (final precio in preciosGuardados) {
       final idx = preciosExistentes.indexWhere(
-        (p) => p.idProducto == precio.idProducto && p.idMoneda == precio.idMoneda,
+        (p) =>
+            p.idProducto == precio.idProducto && p.idMoneda == precio.idMoneda,
       );
       if (idx >= 0) {
         preciosExistentes[idx] = precio;

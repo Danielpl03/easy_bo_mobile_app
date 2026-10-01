@@ -115,9 +115,12 @@ class MyApp extends StatelessWidget {
               (_) => ProductosProvider(
                 TiendasProvider(SupabaseService(SupabaseConfig.client)),
               ),
-          update:
-              (_, tiendasProvider, productosProvider) =>
-                  productosProvider ?? ProductosProvider(tiendasProvider),
+          update: (_, tiendasProvider, productosProvider) {
+            final provider =
+                productosProvider ?? ProductosProvider(tiendasProvider);
+            provider.updateDependencies(tiendasProvider);
+            return provider;
+          },
         ),
         ChangeNotifierProxyProvider<TiendasProvider, VentasProvider>(
           create:
