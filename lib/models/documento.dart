@@ -33,7 +33,7 @@ class Documento {
   final int idSistema;
 
   @HiveField(9)
-  final int idUsuario;
+  final int? idUsuario;
 
   @HiveField(10)
   final num cambio;
@@ -68,7 +68,7 @@ class Documento {
     required this.importe,
     this.descuento,
     required this.idSistema,
-    required this.idUsuario,
+    this.idUsuario,
     required this.cambio,
     this.idLocalidadDestino,
     required this.idDocumento,
@@ -89,7 +89,7 @@ class Documento {
       importe: json['importe'],
       descuento: json['descuento'],
       idSistema: json['id_sistema'] as int,
-      idUsuario: json['id_usuario'] as int,
+      idUsuario: json['id_usuario'] as int?,
       cambio: json['cambio'],
       idLocalidadDestino: json['id_localidad_destino'] as int?,
       idDocumento: json['id_documento'] as String,

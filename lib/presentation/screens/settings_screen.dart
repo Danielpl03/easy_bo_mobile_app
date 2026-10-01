@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:easy_bo_mobile_app/config/supabase_config.dart';
 import 'package:easy_bo_mobile_app/services/edge_function_sql_service.dart';
-import 'package:easy_bo_mobile_app/services/sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,10 +13,6 @@ import 'package:easy_bo_mobile_app/presentation/providers/theme_provider.dart';
 import 'package:easy_bo_mobile_app/config/app_config.dart';
 import '../providers/productos_provider.dart';
 import '../../services/image_service.dart';
-import 'package:easy_bo_mobile_app/services/json_import_service.dart';
-import 'package:easy_bo_mobile_app/services/supabase_service.dart'; // Reintroducir SupabaseService
-import 'package:easy_bo_mobile_app/models/documentos_con_flujos.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Reintroducir Supabase
 import 'package:go_router/go_router.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/auth_provider.dart';
 

@@ -1618,63 +1618,72 @@ class ProductosScreen extends StatelessWidget {
                                 child: Wrap(
                                   spacing: 6,
                                   runSpacing: 4,
-                                  children: monedasProvider.monedas.map((
-                                    moneda,
-                                  ) {
-                                    final precioBase = producto.precios
-                                        .firstWhere(
-                                          (p) => p.idMoneda == 1,
-                                          orElse:
-                                              () => Precio(
-                                                idPrecio: 0,
-                                                idProducto: producto.idProducto,
-                                                idMoneda: 1,
-                                                precio: 0,
-                                              ),
-                                        );
-                                    final precio = producto.precios.firstWhere(
-                                      (p) => p.idMoneda == moneda.idMoneda,
-                                      orElse:
-                                          () => Precio(
-                                            idPrecio: 0,
-                                            idProducto: producto.idProducto,
-                                            idMoneda: moneda.idMoneda,
-                                            precio:
-                                                moneda.tazaCambio > 0
-                                                    ? precioBase.precio /
-                                                        moneda.tazaCambio
-                                                    : 0,
+                                  children:
+                                      monedasProvider.monedas.map((moneda) {
+                                        final precioBase = producto.precios
+                                            .firstWhere(
+                                              (p) => p.idMoneda == 1,
+                                              orElse:
+                                                  () => Precio(
+                                                    idPrecio: 0,
+                                                    idProducto:
+                                                        producto.idProducto,
+                                                    idMoneda: 1,
+                                                    precio: 0,
+                                                  ),
+                                            );
+                                        final precio = producto.precios
+                                            .firstWhere(
+                                              (p) =>
+                                                  p.idMoneda == moneda.idMoneda,
+                                              orElse:
+                                                  () => Precio(
+                                                    idPrecio: 0,
+                                                    idProducto:
+                                                        producto.idProducto,
+                                                    idMoneda: moneda.idMoneda,
+                                                    precio:
+                                                        moneda.tazaCambio > 0
+                                                            ? precioBase
+                                                                    .precio /
+                                                                moneda
+                                                                    .tazaCambio
+                                                            : 0,
+                                                  ),
+                                            );
+                                        final color =
+                                            Colors.primaries[moneda.idMoneda %
+                                                Colors.primaries.length];
+                                        final precioFormateado = NumberFormat(
+                                          '#,##0.00',
+                                          'en_EN',
+                                        ).format(precio.precio);
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
                                           ),
-                                    );
-                                    final color = Colors.primaries[moneda.idMoneda % Colors.primaries.length];
-                                    final precioFormateado = NumberFormat(
-                                      '#,##0.00',
-                                      'en_EN',
-                                    ).format(precio.precio);
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: color.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: color.withOpacity(0.4),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        precio.precio > 0
-                                            ? '${moneda.siglas} $precioFormateado'
-                                            : '${moneda.siglas} —',
-                                        style: theme.textTheme.labelSmall
-                                            ?.copyWith(
-                                              color: color.shade700,
-                                              fontWeight: FontWeight.w600,
+                                          decoration: BoxDecoration(
+                                            color: color.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
-                                      ),
-                                    );
-                                  }).toList(),
+                                            border: Border.all(
+                                              color: color.withOpacity(0.4),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            precio.precio > 0
+                                                ? '${moneda.siglas} $precioFormateado'
+                                                : '${moneda.siglas} —',
+                                            style: theme.textTheme.labelMedium
+                                                ?.copyWith(
+                                                  color: color.shade700,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        );
+                                      }).toList(),
                                 ),
                               ),
                           ],

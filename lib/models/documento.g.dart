@@ -26,7 +26,7 @@ class DocumentoAdapter extends TypeAdapter<Documento> {
       importe: fields[6] as num?,
       descuento: fields[7] as num?,
       idSistema: fields[8] as int,
-      idUsuario: fields[9] as int,
+      idUsuario: fields[9] as int?,
       cambio: fields[10] as num,
       idLocalidadDestino: fields[11] as int?,
       idDocumento: fields[12] as String,
