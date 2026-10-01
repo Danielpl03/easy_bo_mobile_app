@@ -8,6 +8,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../config/supabase_config.dart';
 import '../models/producto.dart';
+import '../models/producto_imagen.dart';
+import '../services/local_storage_service.dart';
+import '../services/supabase_service.dart';
 
 class ImageService {
   static final ImageService _instance = ImageService._internal();
@@ -16,30 +19,43 @@ class ImageService {
 
   final Dio _dio = Dio();
   final ImagePicker _picker = ImagePicker();
+  final SupabaseService _supabaseService = SupabaseService(
+    SupabaseConfig.client,
+  );
+  final LocalStorageService _localStorageService = LocalStorageService();
 
-  // Función para formatear el nombre del archivo según las reglas especificadas
-  String _formatFileName(String text) {
-    return text
-        .replaceAll(
-          RegExp(r'[<>:"/\\|?*¨ñÑ&´´]'),
-          '_',
-        ) // Reemplazar caracteres especiales
-        .replaceAll(' ', '_').toUpperCase(); // Reemplazar espacios
+  String _extractExtension(String path) {
+    final parts = path.split('.');
+    if (parts.length < 2) return 'jpg';
+    return parts.last.toLowerCase();
   }
 
-  // Obtener la URL de la imagen de un producto desde Supabase Storage
-  String getProductImageUrl(Producto producto) {
-    final formattedName = _formatFileName(
-      producto.fullDescripction(uppercase: true),
-    );
-    // Usar la URL pública de Supabase Storage
-    return '${SupabaseConfig.imagesSupabase}$formattedName';
+  String _storageKey(ProductoImagen imagen) => imagen.storageKey;
+
+  String getProductImageUrl(Producto producto, {ProductoImagen? imagen}) {
+    final img = imagen ?? producto.imagenPrincipal;
+    if (img == null) return '';
+    return img.url(SupabaseConfig.imagesSupabase);
   }
 
-  // Widget para mostrar la imagen de un producto con caché
-  Widget getProductImage(Producto producto, {double? width, double? height}) {
+  Widget getProductImage(
+    Producto producto, {
+    ProductoImagen? imagen,
+    double? width,
+    double? height,
+  }) {
+    final imageUrl = getProductImageUrl(producto, imagen: imagen);
+    if (imageUrl.isEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.grey[200],
+        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+      );
+    }
+
     return CachedNetworkImage(
-      imageUrl: getProductImageUrl(producto),
+      imageUrl: imageUrl,
       width: width,
       height: height,
       fit: BoxFit.contain,
@@ -52,6 +68,32 @@ class ImageService {
           (context, url, error) => Container(
             color: Colors.grey[200],
             child: const Icon(Icons.image_not_supported, color: Colors.grey),
+          ),
+    );
+  }
+
+  Widget getEmpresaImage(Color color, {double? width, double? height}) {
+    return CachedNetworkImage(
+      imageUrl: '${SupabaseConfig.imagesSupabase}iconoEmpresa.jpg',
+      imageBuilder:
+          (context, imageProvider) =>
+              CircleAvatar(backgroundImage: imageProvider, radius: 60),
+      width: 90,
+      height: 90,
+      fit: BoxFit.contain,
+      placeholder:
+          (context, url) => CircleAvatar(
+            radius: 60,
+            backgroundColor: color,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      errorWidget:
+          (context, url, error) => Container(
+            color: color,
+            child: const Icon(
+              Icons.apps_rounded,
+              color: Color.fromARGB(255, 255, 255, 255),
+            ),
           ),
     );
   }
@@ -97,7 +139,10 @@ class ImageService {
   ) async {
     final imageUrl = getProductImageUrl(producto);
     try {
-      await precacheImage(CachedNetworkImageProvider(imageUrl), context).onError((e, _) => false);
+      await precacheImage(
+        CachedNetworkImageProvider(imageUrl),
+        context,
+      ).onError((e, _) => false);
       return true;
     } catch (_) {
       return false;
@@ -127,15 +172,19 @@ class ImageService {
   }
 
   // Subir una imagen para un producto a Supabase Storage
+  String _formatFileName(String text) {
+    return text
+        .replaceAll(RegExp(r'[<>:"/\\|?*¨ñÑ&ÁÉÍÓÚÜ]'), '_')
+        .replaceAll(' ', '_')
+        .toUpperCase();
+  }
+
   Future<String?> uploadProductImage(
     Producto producto,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    bool comoPrincipal = false,
+  }) async {
     try {
-      // Obtener la URL actual de la imagen para limpiar la caché después
-      final currentImageUrl = getProductImageUrl(producto);
-
-      // Mostrar diálogo para elegir fuente de imagen
       final ImageSource? source = await _showImageSourceDialog(context);
       if (source == null) {
         if (context.mounted) {
@@ -209,39 +258,55 @@ class ImageService {
         );
       }
 
-      // Preparar el archivo para subir
-      final file = File(image.path);
-      final formattedName = _formatFileName(producto.fullDescripction());
+      final congigKey = await SupabaseConfig.getConfigKey();
+      final storage = SupabaseConfig.storages[congigKey];
 
-      // Eliminar imagen existente en Supabase Storage (si existe)
-      try {
-        await SupabaseConfig.authenticatedStorageClient
-          .from('mlsoluciones')
-          .remove([formattedName]);
-      } catch (_) {}
-
-      // Subir la nueva imagen
-      final response = await SupabaseConfig.authenticatedStorageClient
-        .from('mlsoluciones')
-        .upload(formattedName, file);
-
-      if (response.isNotEmpty) {
-        // Limpiar la caché de la imagen anterior
-        await clearImageCache(currentImageUrl);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Imagen subida exitosamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        // Retornar la URL pública
-        return getProductImageUrl(producto);
-      } else {
-        throw Exception('Error al subir la imagen');
+      if (storage == null) {
+        throw Exception('Error al obtener el Storage');
       }
+
+      final file = File(image.path);
+      final ext = _extractExtension(image.path);
+      final esPrimeraImagen = producto.imagenes.isEmpty;
+      final marcarPrincipal = esPrimeraImagen || comoPrincipal;
+
+      final nombre = producto.fullDescripction();
+
+      final nuevaImagen = await _supabaseService.insertProductoImagen(
+        idProducto: producto.idProducto,
+        nombre: nombre,
+        ext: ext,
+        principal: marcarPrincipal,
+      );
+
+      final nombreArchivo = _storageKey(nuevaImagen);
+      await SupabaseConfig.authenticatedStorageClient
+          .from(storage)
+          .upload(nombreArchivo, file);
+
+      if (marcarPrincipal) {
+        for (var i = 0; i < producto.imagenes.length; i++) {
+          producto.imagenes[i] =
+              producto.imagenes[i].copyWith(principal: false);
+        }
+      }
+      producto.imagenes.add(nuevaImagen);
+      await _localStorageService.saveProductosImagenes([
+        nuevaImagen,
+        ...producto.imagenes.where(
+          (i) => i.idRelacion != nuevaImagen.idRelacion,
+        ),
+      ], removeOthers: false);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Imagen subida exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      return getProductImageUrl(producto);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -252,35 +317,86 @@ class ImageService {
     }
   }
 
-  // Eliminar la imagen de un producto en Supabase Storage
-  Future<void> deleteProductImage(Producto producto) async {
+  Future<void> deleteProductImage(
+    Producto producto,
+    ProductoImagen imagen,
+  ) async {
     try {
-      final formattedName = _formatFileName(producto.fullDescripction());
-      await SupabaseConfig.authenticatedStorageClient
-        .from('mlsoluciones')
-        .remove([formattedName]);
+      final congigKey = await SupabaseConfig.getConfigKey();
+      final storage = SupabaseConfig.storages[congigKey];
+
+      if (storage == null) {
+        throw Exception('Error al obtener el Storage');
+      }
+
+      await clearImageCache(imagen.url(SupabaseConfig.imagesSupabase));
+      await SupabaseConfig.authenticatedStorageClient.from(storage).remove([
+        imagen.nombreArchivo,
+      ]);
+      await _supabaseService.deleteProductoImagen(imagen.idRelacion);
+      await _localStorageService.deleteProductoImagenLocal(imagen.idRelacion);
+
+      final eraPrincipal = imagen.principal;
+      producto.imagenes.removeWhere((i) => i.idRelacion == imagen.idRelacion);
+
+      if (eraPrincipal && producto.imagenes.isNotEmpty) {
+        await setImagenPrincipal(producto, producto.imagenes.first);
+      }
     } catch (e) {
       rethrow;
     }
   }
 
+  Future<void> setImagenPrincipal(
+    Producto producto,
+    ProductoImagen imagen,
+  ) async {
+    await _supabaseService.setImagenPrincipal(
+      producto.idProducto,
+      imagen.idRelacion,
+    );
+
+    final actualizadas = <ProductoImagen>[];
+    for (final img in producto.imagenes) {
+      final actualizada = img.copyWith(
+        principal: img.idRelacion == imagen.idRelacion,
+      );
+      actualizadas.add(actualizada);
+    }
+    producto.imagenes
+      ..clear()
+      ..addAll(actualizadas);
+
+    await _localStorageService.saveProductosImagenes(
+      actualizadas,
+      removeOthers: false,
+    );
+  }
+
   // Descargar la imagen de un producto
   Future<void> downloadProductImage(
     Producto producto,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    ProductoImagen? imagen,
+  }) async {
     try {
-      // Solicitar permiso de almacenamiento
-      final status = await Permission.storage.request();
-      if (!status.isGranted) {
-        throw Exception('Se requieren permisos de almacenamiento para descargar la imagen.');
+      final img = imagen ?? producto.imagenPrincipal;
+      if (img == null) {
+        throw Exception('El producto no tiene imagen registrada');
       }
 
-      final imageUrl = getProductImageUrl(producto);
-      final fileName = '${_formatFileName(producto.fullDescripction())}.jpg';
+      final status = await Permission.storage.request();
+      if (!status.isGranted) {
+        throw Exception(
+          'Se requieren permisos de almacenamiento para descargar la imagen.',
+        );
+      }
+
+      final imageUrl = getProductImageUrl(producto, imagen: img);
+      final fileName = img.nombreArchivo;
 
       // Obtener el directorio de descargas
-      final directory = Directory('/storage/emulated/0/Download');
+      final directory = Directory('/storage/emulated/0/Download/EasyBo');
       if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
@@ -314,5 +430,190 @@ class ImageService {
       }
       rethrow;
     }
+  }
+
+  // Subir múltiples imágenes al bucket de Supabase
+  // image_service.dart - Reemplazar el método uploadMultipleImages con este
+
+  // Subir múltiples imágenes al bucket de Supabase
+  Future<MultipleUploadResult> uploadMultipleImages(
+    List<XFile> images,
+    BuildContext context,
+  ) async {
+    final startTime = DateTime.now();
+    final List<ImageUploadResult> results = [];
+    int successCount = 0;
+    int failCount = 0;
+
+    try {
+      final congigKey = await SupabaseConfig.getConfigKey();
+      final storage = SupabaseConfig.storages[congigKey];
+
+      if (storage == null) {
+        throw Exception('Error al obtener el Storage');
+      }
+
+      // Mostrar mensaje inicial
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Iniciando subida de imágenes...'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+
+      for (int i = 0; i < images.length; i++) {
+        final image = images[i];
+
+        try {
+          // Obtener nombre original y limpiarlo
+          String originalName = image.name;
+
+          // Separar nombre y extensión
+          final parts = originalName.split('.');
+          String fileName;
+          if (parts.length > 1) {
+            final nameWithoutExt = parts.sublist(0, parts.length - 1).join('.');
+            final formattedName = _formatFileName(nameWithoutExt.toUpperCase());
+            fileName = formattedName;
+          } else {
+            fileName = _formatFileName(originalName.toUpperCase());
+          }
+
+          // Asegurar que el nombre no esté vacío
+          if (fileName.isEmpty) {
+            fileName = 'image_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          }
+
+          // Preparar el archivo
+          final file = File(image.path);
+
+          // Verificar que el archivo existe
+          if (!await file.exists()) {
+            throw Exception('El archivo no existe');
+          }
+
+          // Verificar tamaño del archivo (máximo 10MB)
+          final fileSize = await file.length();
+          if (fileSize > 10 * 1024 * 1024) {
+            throw Exception('El archivo es demasiado grande (>10MB)');
+          }
+
+          // Eliminar imagen existente si existe
+          try {
+            await SupabaseConfig.authenticatedStorageClient
+                .from(storage)
+                .remove([fileName]);
+          } catch (_) {
+            // Ignorar si no existe
+          }
+
+          // Subir la imagen con manejo de excepciones específico
+          await SupabaseConfig.authenticatedStorageClient
+              .from(storage)
+              .upload(fileName, file);
+
+          // Obtener la URL pública
+          final imageUrl = '${SupabaseConfig.imagesSupabase}$fileName';
+
+          results.add(
+            ImageUploadResult(
+              fileName: fileName,
+              originalName: image.name,
+              url: imageUrl,
+              success: true,
+              size: fileSize,
+            ),
+          );
+          successCount++;
+        } catch (e) {
+          results.add(
+            ImageUploadResult(
+              fileName: image.name,
+              originalName: image.name,
+              url: null,
+              success: false,
+              error: e.toString(),
+              size: await image.length(),
+            ),
+          );
+          failCount++;
+
+          // Mostrar error individual
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error en ${image.name}: ${e.toString()}'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+
+      return MultipleUploadResult(
+        totalImages: images.length,
+        successfulUploads: successCount,
+        failedUploads: failCount,
+        results: results,
+        totalDuration: duration,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
+// Clases auxiliares simplificadas
+class ImageUploadResult {
+  final String fileName;
+  final String originalName;
+  final String? url;
+  final bool success;
+  final String? error;
+  final int size;
+
+  ImageUploadResult({
+    required this.fileName,
+    required this.originalName,
+    this.url,
+    required this.success,
+    this.error,
+    required this.size,
+  });
+
+  String get formattedSize {
+    if (size < 1024) return '$size B';
+    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
+    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+}
+
+class MultipleUploadResult {
+  final int totalImages;
+  final int successfulUploads;
+  final int failedUploads;
+  final List<ImageUploadResult> results;
+  final Duration totalDuration;
+
+  MultipleUploadResult({
+    required this.totalImages,
+    required this.successfulUploads,
+    required this.failedUploads,
+    required this.results,
+    required this.totalDuration,
+  });
+
+  String get durationFormatted {
+    final seconds = totalDuration.inSeconds;
+    if (seconds < 60) return '$seconds segundos';
+    final minutes = totalDuration.inMinutes;
+    final remainingSeconds = seconds % 60;
+    return '$minutes minutos $remainingSeconds segundos';
   }
 }

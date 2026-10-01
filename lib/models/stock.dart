@@ -15,7 +15,7 @@ class Stock {
   final int idProducto;
 
   @HiveField(3)
-  final int stock;
+  final num stock;
 
   Stock({
     required this.idStock,
@@ -29,7 +29,7 @@ class Stock {
       idStock: json['id_stock'] as int,
       idLocalidad: json['id_localidad'] as int,
       idProducto: json['id_producto'] as int,
-      stock: json['stock'] as int,
+      stock: json['stock'] as num,
     );
   }
 

@@ -3,7 +3,6 @@ import 'package:easy_bo_mobile_app/models/mensaje.dart' show Mensaje, TipoMensaj
 import 'package:easy_bo_mobile_app/models/pedido.dart';
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 class PedidosProvider extends ChangeNotifier {
   final LocalStorageService _localStorage = LocalStorageService();
@@ -73,21 +72,11 @@ class PedidosProvider extends ChangeNotifier {
     actualizarEstado();
   }
 
-  bool crearNuevoPedido(int idTienda) {
+  bool crearNuevoPedido(int idTienda, {int? idProveedor}) {
     _message = Mensaje();
     final horaActual = DateTime.now().hour;
 
     final fecha = horaActual < 14 ? DateTime.now() : DateTime.now().add(const Duration(days: 1));
-    
-
-    if (_pedidos.any(
-      (p) => p.idTienda == idTienda && DateUtils.isSameDay(p.fecha, fecha),
-    )) {
-      _pedidoActual = _pedidos.firstWhere((p) => p.idTienda == idTienda && DateUtils.isSameDay(p.fecha, fecha));
-      _message = Mensaje(mensaje: 'Ya existe un pedido para ${fecha.day == DateTime.now().day ? 'hoy' : DateFormat('dd/MM/yyyy').format(fecha)}', tipoMensaje: TipoMensaje.error);
-      actualizarEstado();
-      return false;
-    }
 
     _pedidoActual = Pedido(
       idPedido: _pedidos.length + 1,
@@ -95,6 +84,7 @@ class PedidosProvider extends ChangeNotifier {
       idTienda: idTienda,
       estado: 'PENDIENTE',
       detalles: [],
+      idProveedor: idProveedor,
     );
     _message = null;  
     actualizarEstado();

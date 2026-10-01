@@ -3,44 +3,45 @@ import 'package:hive/hive.dart';
 
 part 'movimiento.g.dart'; // Genera el archivo .g.dart
 
-@HiveType(typeId: 8) 
+@HiveType(typeId: 8)
 class Movimiento {
-
   @HiveField(0)
   final int idMovimiento;
-  
+
   @HiveField(1)
   final int idProducto; // ID del producto asociado al movimiento
-  
+
   @HiveField(2)
-  final int cantidad; // Cantidad del producto en el movimiento
-  
+  final num cantidad; // Cantidad del producto en el movimiento
+
   @HiveField(3)
-  final num precioProducto; // Precio del producto
-  
+  final num? precioProducto; // Precio del producto
+
   @HiveField(4)
   final int? idDescuento; // ID del descuento aplicado, si lo hay
-  
+
   @HiveField(5)
   final int? idPago; // ID del pago asociado, si lo hay
-  
+
   @HiveField(6)
   final num? importe; // Importe total del movimiento
-  
+
   @HiveField(7)
-  final int? saldoProducto; // Saldo del producto después del movimiento
-  
+  final num? saldoProducto; // Saldo del producto después del movimiento
+
   @HiveField(8)
   final bool espejo; // Indica si es un movimiento espejo
-  
+
   @HiveField(9)
   final String idDocumento; // ID del documento asociado al movimiento
-  
+
   @HiveField(10)
   final num? descuento; // Descuento aplicado al movimiento
 
-  Producto? producto;
+  @HiveField(11)
+  final num? costoProducto; // Descuento aplicado al movimiento
 
+  Producto? producto;
 
   Movimiento({
     required this.idMovimiento,
@@ -54,10 +55,20 @@ class Movimiento {
     required this.espejo,
     required this.idDocumento,
     this.descuento,
-    this.producto
+    this.producto,
+    this.costoProducto,
   });
 
   factory Movimiento.fromJson(Map<String, dynamic> json) {
+    final costoProducto = json['costo_producto'];
+
+    // Log para debugging si el costo viene null pero debería tener valor
+    if (costoProducto == null && json['id_movimiento'] != null) {
+      print(
+        '⚠️ [Movimiento.fromJson] Movimiento ${json['id_movimiento']} sin costo_producto. JSON keys: ${json.keys.toList()}',
+      );
+    }
+
     return Movimiento(
       idMovimiento: json['id_movimiento'],
       idProducto: json['id_producto'],
@@ -70,7 +81,8 @@ class Movimiento {
       espejo: json['espejo'],
       idDocumento: json['id_documento'],
       descuento: json['descuento'],
-      producto: json['producto']
+      producto: json['producto'],
+      costoProducto: costoProducto,
     );
   }
 
@@ -90,6 +102,7 @@ class Movimiento {
       'espejo': espejo,
       'id_documento': idDocumento,
       'descuento': descuento,
+      'costo_producto': costoProducto,
     };
   }
 }

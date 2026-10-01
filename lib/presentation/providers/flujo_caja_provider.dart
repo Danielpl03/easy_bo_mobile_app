@@ -123,7 +123,7 @@ class FlujoCajaProvider extends ChangeNotifier {
         fechaFin: fechaFin,
       );
       _flujos = flujosRemotos;
-      await _localStorageService.saveFlujosCaja(_flujos);
+      unawaited(_localStorageService.saveFlujosCaja(_flujos));
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -206,13 +206,12 @@ class FlujoCajaProvider extends ChangeNotifier {
           ),
         },
       );
-      ResumenFlujo? resumenFlujo =
-            resumen[flujo.idLocalidad]![flujo.formaPago];
-        resumenFlujo ??= ResumenFlujo(
-          formaPago: getPago(flujo.formaPago),
-          importe: 0,
-          monto: 0,
-        );
+      ResumenFlujo? resumenFlujo = resumen[flujo.idLocalidad]![flujo.formaPago];
+      resumenFlujo ??= ResumenFlujo(
+        formaPago: getPago(flujo.formaPago),
+        importe: 0,
+        monto: 0,
+      );
       if (flujo.tipo == "IN") {
         resumenFlujo.importe += flujo.importe;
         resumenFlujo.monto += flujo.monto!;

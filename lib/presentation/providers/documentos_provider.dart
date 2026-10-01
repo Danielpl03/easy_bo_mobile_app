@@ -5,7 +5,8 @@ import 'package:easy_bo_mobile_app/config/supabase_config.dart';
 import 'package:easy_bo_mobile_app/models/documento.dart';
 import 'package:easy_bo_mobile_app/models/movimiento.dart';
 import 'package:easy_bo_mobile_app/models/movimiento_historial.dart';
-import 'package:easy_bo_mobile_app/models/rango_fechas.dart';
+import 'package:easy_bo_mobile_app/models/cliente.dart';
+import 'package:easy_bo_mobile_app/models/proveedor.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
 import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
 import 'package:easy_bo_mobile_app/services/supabase_service.dart';
@@ -15,6 +16,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class Filtros {
   DateTimeRange? rangoFechas;
   List<int> localidadesSeleccionadas = [];
+  String? tipoDocumento; // Nuevo: filtro por tipo de documento
 }
 
 class DocumentosProvider extends ChangeNotifier {
@@ -35,16 +37,65 @@ class DocumentosProvider extends ChangeNotifier {
   List<Documento> _documentos = [];
   List<Documento> _documentosFiltrados = [];
   List<MovimientoHistorial> _movimientosHistorial = [];
+  List<Cliente> _clientes = [];
+  List<Proveedor> _proveedores = [];
 
   bool get cargando => _cargando;
   String? get errorMessage => _errorMessage;
   List<Documento> get documentos => _documentos;
   List<Documento> get documentosFiltrados => _documentosFiltrados;
   List<MovimientoHistorial> get movimientosHistorial => _movimientosHistorial;
+  List<Cliente> get clientes => _clientes;
+  List<Proveedor> get proveedores => _proveedores;
 
   DocumentosProvider(this.tiendasProvider) {
     _inicializarFiltros();
+    _cargarClientesYProveedores();
     // unawaited(getDocumentos());
+  }
+
+  Future<void> _cargarClientesYProveedores() async {
+    try {
+      _clientes = await _localStorageService.getClientes();
+      _proveedores = await _localStorageService.getProveedores();
+      print('📋 [Provider] Clientes cargados: ${_clientes.length}');
+      print('📋 [Provider] Proveedores cargados: ${_proveedores.length}');
+
+      // Si no hay datos locales, intentar cargar desde Supabase
+      if (_clientes.isEmpty || _proveedores.isEmpty) {
+        await _sincronizarClientesYProveedores();
+      }
+    } catch (e) {
+      print('⚠️ [Provider] Error al cargar clientes/proveedores: $e');
+      // Intentar cargar desde Supabase si falla la carga local
+      try {
+        await _sincronizarClientesYProveedores();
+      } catch (e2) {
+        print('⚠️ [Provider] Error al sincronizar clientes/proveedores: $e2');
+      }
+    }
+  }
+
+  Future<void> _sincronizarClientesYProveedores() async {
+    try {
+      print(
+        '🔄 [Provider] Sincronizando clientes y proveedores desde Supabase...',
+      );
+      final clientesRemotos = await _supabaseService.getClientes();
+      final proveedoresRemotos = await _supabaseService.getProveedores();
+
+      await _localStorageService.saveClientes(clientesRemotos);
+      await _localStorageService.saveProveedores(proveedoresRemotos);
+
+      _clientes = clientesRemotos;
+      _proveedores = proveedoresRemotos;
+
+      print('✅ [Provider] Clientes sincronizados: ${_clientes.length}');
+      print('✅ [Provider] Proveedores sincronizados: ${_proveedores.length}');
+    } catch (e) {
+      print('❌ [Provider] Error al sincronizar clientes/proveedores: $e');
+      rethrow;
+    }
   }
 
   void _inicializarFiltros() {
@@ -104,7 +155,19 @@ class DocumentosProvider extends ChangeNotifier {
         '📅 [Provider] Nuevo rango establecido: ${_filtros.rangoFechas!.start} - ${_filtros.rangoFechas!.end}',
       );
     }
-    // await getDocumentos(forceUpdate: true);
+
+    // Filtrar inmediatamente con el nuevo rango
+    filtrarDocumentos();
+    actualizarEstado();
+
+    // Luego actualizar datos si es necesario
+    await getDocumentos(forceUpdate: true);
+  }
+
+  void setTipoDocumento(String? tipo) {
+    _filtros.tipoDocumento = tipo;
+    filtrarDocumentos();
+    actualizarEstado();
   }
 
   void setLocalidadesSeleccionadas(List<int> localidades) {
@@ -142,9 +205,6 @@ class DocumentosProvider extends ChangeNotifier {
       print(
         '📅 [Provider] Rangos faltantes encontrados: ${rangosFaltantes.length}',
       );
-      for (var rango in rangosFaltantes) {
-        print('  - ${rango.start} a ${rango.end}');
-      }
 
       if (rangosFaltantes.isNotEmpty) {
         await actualizarDesdeRemoto(rangosFaltantes);
@@ -153,6 +213,10 @@ class DocumentosProvider extends ChangeNotifier {
       // Cargar datos locales una sola vez
       print('📥 [Provider] Cargando datos locales...');
       await cargarDesdeLocal();
+      // Asegurar que clientes y proveedores estén cargados
+      if (_clientes.isEmpty || _proveedores.isEmpty) {
+        await _cargarClientesYProveedores();
+      }
       print(
         '📥 [Provider] Datos locales cargados: ${_documentos.length} documentos',
       );
@@ -181,31 +245,74 @@ class DocumentosProvider extends ChangeNotifier {
     final documentosLocales = await _localStorageService.getDocumentos();
     final movimientosLocales = await _localStorageService.getMovimientos();
 
-    final docFiltrados = filtrarPorFecha(documentosLocales);
-
-    _documentos = _enriquecerDocumentos(docFiltrados, movimientosLocales);
+    _documentos = _enriquecerDocumentos(documentosLocales, movimientosLocales);
   }
 
-  Future<void> actualizarDesdeRemoto(
-    List<DateTimeRange> rangosFaltantes,
-  ) async {
+  Future<void> actualizarDesdeRemoto(List<DateTime> rangosFaltantes) async {
     // Obtener los rangos de fechas que faltan
     List<Documento> documentosRemotos = [];
     List<Movimiento> movimientosRemotos = [];
+    DateTime now = DateTime.now();
 
     // Obtener documentos solo para los rangos faltantes
-    for (var rango in rangosFaltantes) {
-      print(
-        '📥 [Provider] Obteniendo documentos para rango: ${rango.start} - ${rango.end}',
-      );
+    for (var primerDiaMes in rangosFaltantes) {
+      final anio = primerDiaMes.year;
+      final mes = primerDiaMes.month;
+      final esMesActual = anio == now.year && mes == now.month;
+
+      DateTimeRange range;
+      DateTime fechaGuardar;
+
+      if (esMesActual) {
+        // Para el mes actual, verificar si hay datos parciales
+        final ultimaFechaDescargada =
+            await _localStorageService.getUltimaFechaMesActual();
+
+        DateTime fechaInicio;
+        if (ultimaFechaDescargada != null) {
+          // Hay datos parciales, descargar desde el día siguiente a la última fecha
+          // Usar add para manejar correctamente el desbordamiento de días
+          fechaInicio = DateTime(
+            ultimaFechaDescargada.year,
+            ultimaFechaDescargada.month,
+            ultimaFechaDescargada.day,
+          ).add(const Duration(days: 1));
+          print(
+            '📅 [Provider] Mes actual con datos parciales. Última fecha: $ultimaFechaDescargada, Descargando desde: $fechaInicio',
+          );
+        } else {
+          // No hay datos, descargar desde el inicio del mes
+          fechaInicio = DateTime(anio, mes, 1);
+          print(
+            '📅 [Provider] Mes actual sin datos. Descargando desde inicio: $fechaInicio',
+          );
+        }
+
+        range = DateTimeRange(start: fechaInicio, end: now);
+        // Para el mes actual, guardar la última fecha descargada (hoy)
+        fechaGuardar = DateTime(now.year, now.month, now.day);
+      } else {
+        // Para meses pasados, descargar el mes completo
+        DateTime start = DateTime(anio, mes, 1);
+        DateTime end = DateTime(start.year, start.month + 1, 0, 23, 59, 59);
+        range = DateTimeRange(start: start, end: end);
+        // Para meses completos, guardar el primer día del mes
+        fechaGuardar = DateTime(anio, mes, 1);
+        print('📅 [Provider] Descargando mes completo: ${start} - ${end}');
+      }
+
       final docs = await _supabaseService.getDocumentos(
-        start: rango.start,
-        end: rango.end,
+        start: range.start,
+        end: range.end,
       );
       print(
         '📥 [Provider] Documentos obtenidos para este rango: ${docs.length}',
       );
       documentosRemotos.addAll(docs);
+
+      // Guardar la fecha correspondiente para este mes
+      await _localStorageService.guardarFechaParaMes(anio, mes, fechaGuardar);
+      print('💾 [Provider] Fecha guardada para mes $anio-$mes: $fechaGuardar');
     }
 
     if (documentosRemotos.isNotEmpty) {
@@ -219,28 +326,8 @@ class DocumentosProvider extends ChangeNotifier {
         '📥 [Provider] Movimientos obtenidos: ${movimientosRemotos.length}',
       );
 
-      // Actualizar estado
-      // _documentos = _enriquecerDocumentos(
-      //   documentosRemotos,
-      //   movimientosRemotos,
-      // );
-      // print('📦 [Provider] Documentos enriquecidos: ${_documentos.length}');
-
-      // Guardar en local
       print('💾 [Provider] Guardando datos en local...');
       await _guardarEnLocal(documentosRemotos, movimientosRemotos);
-
-      // Registrar los nuevos rangos de fechas (meses completos)
-      if (rangosFaltantes.isNotEmpty) {
-        for (var rangoFaltante in rangosFaltantes) {
-          print(
-            '📅 [Provider] Registrando nuevo rango de fechas: ${rangoFaltante.start} - ${rangoFaltante.end}',
-          );
-          _localStorageService.agregarRangoFechas(
-            RangoFechas(inicio: rangoFaltante.start, fin: rangoFaltante.end),
-          );
-        }
-      }
     } else {
       print('ℹ️ [Provider] No se encontraron documentos nuevos para obtener');
     }
@@ -268,26 +355,12 @@ class DocumentosProvider extends ChangeNotifier {
     }
 
     for (Documento doc in documentos) {
+      doc.movimientos.clear();
       if (movimientosPorDocumento.containsKey(doc.idDocumento)) {
         doc.movimientos.addAll(movimientosPorDocumento[doc.idDocumento]!);
       }
     }
     return documentos;
-  }
-
-  List<Documento> filtrarPorFecha(List<Documento> documentos) {
-    return documentos.where((doc) {
-      if (_filtros.rangoFechas == null) {
-        print('❌ No hay rango de fechas definido');
-        return false;
-      }
-
-      final enRango =
-          doc.fecha.isAfter(_filtros.rangoFechas!.start) &&
-          doc.fecha.isBefore(_filtros.rangoFechas!.end);
-
-      return enRango;
-    }).toList();
   }
 
   void filtrarDocumentos() {
@@ -296,27 +369,61 @@ class DocumentosProvider extends ChangeNotifier {
 
     _documentosFiltrados =
         _documentos.where((doc) {
-          // if (_filtros.rangoFechas == null) {
-          //   print('❌ No hay rango de fechas definido');
-          //   return false;
-          // }
+          // Filtro por fecha - ES CRÍTICO
+          if (_filtros.rangoFechas != null) {
+            final fechaDoc = DateTime(
+              doc.fecha.year,
+              doc.fecha.month,
+              doc.fecha.day,
+            );
+            final fechaInicio = DateTime(
+              _filtros.rangoFechas!.start.year,
+              _filtros.rangoFechas!.start.month,
+              _filtros.rangoFechas!.start.day,
+            );
+            final fechaFin = DateTime(
+              _filtros.rangoFechas!.end.year,
+              _filtros.rangoFechas!.end.month,
+              _filtros.rangoFechas!.end.day,
+            );
 
-          // final enRango =
-          //     doc.fecha.isAfter(_filtros.rangoFechas!.start) &&
-          //     doc.fecha.isBefore(_filtros.rangoFechas!.end);
+            final enRango =
+                fechaDoc.isAtSameMomentAs(fechaInicio) ||
+                fechaDoc.isAtSameMomentAs(fechaFin) ||
+                (fechaDoc.isAfter(fechaInicio) && fechaDoc.isBefore(fechaFin));
 
-          // if (!enRango) return false;
+            if (!enRango) {
+              print('❌ Documento fuera de rango: ${doc.fecha} - ${doc.tipo}');
+              return false;
+            }
+          }
 
+          // Filtro por tipo de documento
+          if (_filtros.tipoDocumento != null &&
+              _filtros.tipoDocumento!.isNotEmpty) {
+            if (doc.tipo != _filtros.tipoDocumento) {
+              return false;
+            }
+          }
+
+          // Filtro por localidades
           if (_filtros.localidadesSeleccionadas.isNotEmpty) {
             final cumpleFiltro =
                 _filtros.localidadesSeleccionadas.contains(doc.idLocalidad) ||
+                (doc.idLocalidadDestino != null &&
+                    _filtros.localidadesSeleccionadas.contains(
+                      doc.idLocalidadDestino,
+                    )) ||
                 doc.tipo == 'CREADO' ||
                 doc.tipo == 'MODIFICADO';
-            return cumpleFiltro;
+            if (!cumpleFiltro) {
+              return false;
+            }
           }
 
           return true;
         }).toList();
+
     print('📊 Documentos después de filtrar: ${_documentosFiltrados.length}');
     print('✅ Filtrado completado');
   }
@@ -355,7 +462,9 @@ class DocumentosProvider extends ChangeNotifier {
 
     _movimientosHistorial = tempMovimientosHistorial;
 
-    print('📊 [Provider] Movimientos encontrados: ${_movimientosHistorial.length}');
+    print(
+      '📊 [Provider] Movimientos encontrados: ${_movimientosHistorial.length}',
+    );
     print(
       '📊 [Provider] Movimientos únicos procesados: ${movimientosProcesados.length}',
     );
@@ -376,6 +485,101 @@ class DocumentosProvider extends ChangeNotifier {
   void actualizarEstado() {
     if (!_isDisposed) {
       notifyListeners();
+    }
+  }
+
+  // Métodos adicionales para la pantalla
+  List<String> getTiposDocumentoUnicos() {
+    final tipos = _documentos.map((doc) => doc.tipo).toSet().toList();
+    tipos.sort();
+    return tipos;
+  }
+
+  void limpiarFiltros() {
+    _filtros.localidadesSeleccionadas.clear();
+    _filtros.tipoDocumento = null;
+    _inicializarFiltros();
+    filtrarDocumentos();
+    actualizarEstado();
+  }
+
+  // Métodos helper para obtener cliente y proveedor por ID
+  // Si no se encuentra localmente, intenta obtenerlo desde Supabase
+  Future<Cliente?> getClientePorId(int? idCliente) async {
+    if (idCliente == null) return null;
+
+    try {
+      // Buscar primero en la lista local
+      try {
+        final clienteLocal = _clientes.firstWhere(
+          (c) => c.idCliente == idCliente,
+        );
+        return clienteLocal;
+      } catch (e) {
+        // No se encontró localmente, continuar para buscar en Supabase
+      }
+
+      // Si no se encontró localmente, intentar obtenerlo desde Supabase
+      print(
+        '🔍 [Provider] Cliente $idCliente no encontrado localmente, buscando en Supabase...',
+      );
+      final clienteRemoto = await _supabaseService.getClientePorId(idCliente);
+
+      if (clienteRemoto != null) {
+        // Guardar el nuevo cliente en almacenamiento local
+        _clientes.add(clienteRemoto);
+        await _localStorageService.saveClientes(_clientes);
+        print(
+          '✅ [Provider] Cliente $idCliente obtenido y guardado desde Supabase',
+        );
+        return clienteRemoto;
+      }
+
+      print('⚠️ [Provider] Cliente $idCliente no encontrado en Supabase');
+      return null;
+    } catch (e) {
+      print('❌ [Provider] Error al obtener cliente $idCliente: $e');
+      return null;
+    }
+  }
+
+  Future<Proveedor?> getProveedorPorId(int? idProveedor) async {
+    if (idProveedor == null) return null;
+
+    try {
+      // Buscar primero en la lista local
+      try {
+        final proveedorLocal = _proveedores.firstWhere(
+          (p) => p.idProveedor == idProveedor,
+        );
+        return proveedorLocal;
+      } catch (e) {
+        // No se encontró localmente, continuar para buscar en Supabase
+      }
+
+      // Si no se encontró localmente, intentar obtenerlo desde Supabase
+      print(
+        '🔍 [Provider] Proveedor $idProveedor no encontrado localmente, buscando en Supabase...',
+      );
+      final proveedorRemoto = await _supabaseService.getProveedorPorId(
+        idProveedor,
+      );
+
+      if (proveedorRemoto != null) {
+        // Guardar el nuevo proveedor en almacenamiento local
+        _proveedores.add(proveedorRemoto);
+        await _localStorageService.saveProveedores(_proveedores);
+        print(
+          '✅ [Provider] Proveedor $idProveedor obtenido y guardado desde Supabase',
+        );
+        return proveedorRemoto;
+      }
+
+      print('⚠️ [Provider] Proveedor $idProveedor no encontrado en Supabase');
+      return null;
+    } catch (e) {
+      print('❌ [Provider] Error al obtener proveedor $idProveedor: $e');
+      return null;
     }
   }
 }

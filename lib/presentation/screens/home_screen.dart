@@ -1,7 +1,9 @@
+import 'package:easy_bo_mobile_app/config/app_config.dart';
 import 'package:easy_bo_mobile_app/models/mensaje.dart' show TipoMensaje;
 import 'package:easy_bo_mobile_app/models/tienda.dart';
 import 'package:easy_bo_mobile_app/models/localidad.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
+import 'package:easy_bo_mobile_app/services/image_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -149,6 +151,8 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tiendasProvider = context.watch<TiendasProvider>();
     final theme = Theme.of(context);
+    final imageService = ImageService();
+    String? nombreEmpresa = tiendasProvider.nombreEmpresa;
 
     return Scaffold(
       drawer: Drawer(
@@ -157,18 +161,31 @@ class HomeScreen extends StatelessWidget {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(color: theme.primaryColor),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.apps_rounded, color: Colors.white, size: 40),
-                  SizedBox(height: 10),
-                  Text(
-                    'Easy BO',
+                  const Text(
+                    AppConfig.appName,
                     style: TextStyle(color: Colors.white, fontSize: 24),
                   ),
-                  Text(
-                    'M&L SOLUCIONES',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      imageService.getEmpresaImage(theme.primaryColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          nombreEmpresa ?? '',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -195,7 +212,9 @@ class HomeScreen extends StatelessWidget {
               ),
         ),
         title: const Row(
-          children: [Text('Easy BO', style: TextStyle(color: Colors.white))],
+          children: [
+            Text(AppConfig.appName, style: TextStyle(color: Colors.white)),
+          ],
         ),
         actions: [],
         backgroundColor: theme.primaryColor,
@@ -228,10 +247,34 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   _buildNavigationButton(
                     context: context,
+                    icon: Icons.category,
+                    label: 'Departamentos y Categorías',
+                    route: '/catalogos',
+                    color: const Color.fromARGB(255, 149, 173, 13),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNavigationButton(
+                    context: context,
                     icon: Icons.inventory_2,
                     label: 'Gestión de Productos',
                     route: '/productos',
                     color: Colors.blueAccent,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNavigationButton(
+                    context: context,
+                    icon: Icons.business,
+                    label: 'Productos por Proveedor',
+                    route: '/proveedores',
+                    color: Colors.teal,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNavigationButton(
+                    context: context,
+                    icon: Icons.history_edu,
+                    label: 'Historial de Documentos',
+                    route: '/documentos',
+                    color: Colors.purpleAccent,
                   ),
                   const SizedBox(height: 16),
                   _buildNavigationButton(

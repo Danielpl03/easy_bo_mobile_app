@@ -1,3 +1,4 @@
+import 'package:easy_bo_mobile_app/models/moneda.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/monedas_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/flujo_caja_provider.dart';
@@ -32,48 +33,6 @@ class ResumenTiendas extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Text(
-          //   'Resumen por Tienda',
-          //   style: theme.textTheme.titleMedium?.copyWith(
-          //     fontWeight: FontWeight.bold,
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          // Wrap(
-          //   spacing: 12,
-          //   runSpacing: 8,
-          //   children: resumenVentas.entries.map((entry) {
-          //     return Chip(
-          //       backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-          //       label: Row(
-          //         mainAxisSize: MainAxisSize.min,
-          //         children: [
-          //           Text(
-          //             '${entry.key}:',
-          //             style: TextStyle(
-          //               color: theme.colorScheme.primary,
-          //             ),
-          //           ),
-          //           const SizedBox(width: 6),
-          //           Text(
-          //             '\$${NumberFormat('#,##0.00', 'es_MX').format(entry.value)}',
-          //             style: TextStyle(
-          //               fontWeight: FontWeight.bold,
-          //               color: theme.colorScheme.primary,
-          //             ),
-          //           ),
-          //         ],
-          //       ),
-          //     );
-          //   }).toList(),
-          // ),
-          // const SizedBox(height: 16),
-          Text(
-            'Resumen de Ingresos',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
           const SizedBox(height: 8),
           if (flujoCajaProvider.cargando) const CircularProgressIndicator(),
           if (resumenFlujos.isEmpty && !flujoCajaProvider.cargando)
@@ -121,7 +80,15 @@ class ResumenTiendas extends StatelessWidget {
                           resumenMetodoPago.entries.map((entryMetodo) {
                             final idMetodo = entryMetodo.key;
                             final pago = entryMetodo.value.formaPago;
-                            final moneda = monedasProvider.getMoneda(pago.idMoneda);
+                            final moneda =
+                                monedasProvider.getMoneda(pago.idMoneda) ??
+                                Moneda(
+                                  idMoneda: pago.idMoneda,
+                                  nombre: 'Desconocida',
+                                  siglas: 'N/A',
+                                  porDefecto: false,
+                                  tazaCambio: 1.0,
+                                );
                             final importe = entryMetodo.value.importe;
                             final monto = entryMetodo.value.monto;
                             final nombreMetodo =
@@ -135,16 +102,17 @@ class ResumenTiendas extends StatelessWidget {
 
                             return Chip(
                               avatar: Icon(icono, color: color),
-                              label: monto == importe ? 
-                              Text(
-                                '$nombreMetodo: \$${NumberFormat('#,##0.00', 'es_MX').format(importe)}',
-                                style: TextStyle(color: color),
-                              ) :
-                              Text(
-                                '$nombreMetodo:\n ${NumberFormat('#,##0.00', 'es_MX').format(monto)} ${moneda.siglas}: \$${NumberFormat('#,##0.00', 'es_MX').format(importe)}',
-                                style: TextStyle(color: color),
-                                maxLines: 2,
-                              ),
+                              label:
+                                  monto == importe
+                                      ? Text(
+                                        '$nombreMetodo: \$${NumberFormat('#,##0.00', 'es_MX').format(importe)}',
+                                        style: TextStyle(color: color),
+                                      )
+                                      : Text(
+                                        '$nombreMetodo:\n ${NumberFormat('#,##0.00', 'es_MX').format(monto)} ${moneda.siglas}: \$${NumberFormat('#,##0.00', 'es_MX').format(importe)}',
+                                        style: TextStyle(color: color),
+                                        maxLines: 2,
+                                      ),
                               backgroundColor: color.withOpacity(0.1),
                               shape: StadiumBorder(
                                 side: BorderSide(color: color),
@@ -156,7 +124,7 @@ class ResumenTiendas extends StatelessWidget {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

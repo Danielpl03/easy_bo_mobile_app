@@ -1,4 +1,5 @@
 import 'package:easy_bo_mobile_app/models/localidad.dart';
+import 'package:easy_bo_mobile_app/models/moneda.dart';
 import 'package:easy_bo_mobile_app/models/movimiento_historial.dart';
 import 'package:easy_bo_mobile_app/models/producto.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
@@ -298,7 +299,7 @@ class _ProductoHistorialScreenState extends State<ProductoHistorialScreen> {
   Widget _buildMovimientoItem(MovimientoHistorial movimiento, ThemeData theme) {
     final esEntrada =
         movimiento.documento.tipo == 'ENTRADA' ||
-        movimiento.documento.tipo == 'POSITIVO';
+        movimiento.documento.tipo == 'POSITIVO' || movimiento.espejo;
     final esCreacion = movimiento.documento.tipo == 'CREADO';
     final esModificacion = movimiento.documento.tipo == 'MODIFICADO';
     final esTraslado = movimiento.documento.tipo == 'TRASLADO';
@@ -306,7 +307,14 @@ class _ProductoHistorialScreenState extends State<ProductoHistorialScreen> {
     final pago = context.read<FlujoCajaProvider>().getPago(
       movimiento.idPago ?? 1,
     );
-    final moneda = context.read<MonedasProvider>().getMoneda(pago.idMoneda);
+    final moneda = context.read<MonedasProvider>().getMoneda(pago.idMoneda) ??
+        Moneda(
+          idMoneda: pago.idMoneda,
+          nombre: 'Desconocida',
+          siglas: 'N/A',
+          porDefecto: false,
+          tazaCambio: 1.0,
+        );
 
     int? localidadDestino = movimiento.documento.idLocalidadDestino;
 
@@ -319,6 +327,7 @@ class _ProductoHistorialScreenState extends State<ProductoHistorialScreen> {
             localidad: 'Desconocida',
             idTienda: 0,
             tipo: '',
+            ipv: false
           ),
     );
 
@@ -379,8 +388,8 @@ class _ProductoHistorialScreenState extends State<ProductoHistorialScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        esTraslado
-                            ? '${movimiento.documento.idLocalidad} -> ${localidadDestino ?? movimiento.documento.razon}'
+                        esTraslado && localidadDestino != null ?
+                            '${movimiento.documento.idLocalidad} -> $localidadDestino' 
                             : movimiento.documento.razon,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white,

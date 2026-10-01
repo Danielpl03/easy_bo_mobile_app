@@ -18,7 +18,14 @@ class MonedasProvider extends ChangeNotifier {
 
 
   MonedasProvider(this._supabaseService) {
-    getMonedas().then( (_) => _monedaSeleccionada = _monedas.firstWhere((m) => m.idMoneda == 1));
+    getMonedas().then((_) {
+      try {
+        _monedaSeleccionada = _monedas.firstWhere((m) => m.idMoneda == 1);
+      } catch (e) {
+        // Si no se encuentra la moneda con ID 1, usar la primera disponible o null
+        _monedaSeleccionada = _monedas.isNotEmpty ? _monedas.first : null;
+      }
+    });
   }
 
   void setMonedaSeleccionada(Moneda moneda) {
@@ -27,7 +34,12 @@ class MonedasProvider extends ChangeNotifier {
   }
 
   void seleccionarMoneda(int idMoneda) {
-    _monedaSeleccionada = _monedas.firstWhere((m) => m.idMoneda == idMoneda);
+    try {
+      _monedaSeleccionada = _monedas.firstWhere((m) => m.idMoneda == idMoneda);
+    } catch (e) {
+      // Si no se encuentra la moneda, mantener la selección actual o usar null
+      _monedaSeleccionada = null;
+    }
     notifyListeners();
   }
 
@@ -49,7 +61,12 @@ class MonedasProvider extends ChangeNotifier {
     _localStorageService.saveMonedas(monedas);
   }
 
-  Moneda getMoneda(int idMoneda){
-    return _monedas.firstWhere( (m) => m.idMoneda == idMoneda);
+  Moneda? getMoneda(int idMoneda) {
+    try {
+      return _monedas.firstWhere((m) => m.idMoneda == idMoneda);
+    } catch (e) {
+      // Si no se encuentra la moneda, retornar null
+      return null;
+    }
   }
 }

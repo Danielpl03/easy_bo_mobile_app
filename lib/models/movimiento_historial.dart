@@ -16,6 +16,7 @@ class MovimientoHistorial extends Movimiento {
     required super.idPago,
     required super.saldoProducto,
     required this.documento,
+    required super.costoProducto,
   });
 
   factory MovimientoHistorial.fromMovimiento(Movimiento movimiento, Documento documento) {
@@ -31,6 +32,7 @@ class MovimientoHistorial extends Movimiento {
       idPago: movimiento.idPago,
       saldoProducto: movimiento.saldoProducto,
       documento: documento,
+      costoProducto: movimiento.costoProducto
     );
   }
 } 

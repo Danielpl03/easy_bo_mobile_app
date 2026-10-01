@@ -21,13 +21,14 @@ class LocalidadAdapter extends TypeAdapter<Localidad> {
       localidad: fields[1] as String,
       idTienda: fields[2] as int,
       tipo: fields[3] as String,
+      ipv: fields[4] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Localidad obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.idLocalidad)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class LocalidadAdapter extends TypeAdapter<Localidad> {
       ..writeByte(2)
       ..write(obj.idTienda)
       ..writeByte(3)
-      ..write(obj.tipo);
+      ..write(obj.tipo)
+      ..writeByte(4)
+      ..write(obj.ipv);
   }
 
   @override

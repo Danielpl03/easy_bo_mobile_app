@@ -1,4 +1,5 @@
 import 'package:easy_bo_mobile_app/models/precio.dart';
+import 'package:easy_bo_mobile_app/models/producto_imagen.dart';
 import 'package:easy_bo_mobile_app/models/stock.dart';
 
 import 'package:hive/hive.dart';
@@ -32,16 +33,28 @@ class Producto {
   final String? barcode;
 
   @HiveField(8)
-  final double? costo;
+  final num? costo;
 
   @HiveField(9)
   final bool combo;
 
   @HiveField(10)
-  final bool web;
+  final bool? web;
+
+  @HiveField(11)
+  final int? idMonedaCosto;
 
   List<Precio> precios = [];
   List<Stock> stocks = [];
+  List<ProductoImagen> imagenes = [];
+
+  ProductoImagen? get imagenPrincipal {
+    if (imagenes.isEmpty) return null;
+    for (final img in imagenes) {
+      if (img.principal) return img;
+    }
+    return imagenes.first;
+  }
 
   Producto({
     required this.idProducto,
@@ -55,6 +68,7 @@ class Producto {
     this.costo,
     required this.combo,
     required this.web,
+    this.idMonedaCosto
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -68,9 +82,10 @@ class Producto {
       idCategoria: json['id_categoria'] as int?,
       activo: json['activo'] as bool,
       barcode: json['barcode'] as String?,
-      costo: (json['costo'] as num?)?.toDouble(),
+      costo: json['costo'] as num?,
       combo: json['combo'] as bool,
-      web: json['web'] as bool? ?? false,
+      web: json['web'] as bool?,
+      idMonedaCosto: json['id_moneda_costo'] as int?
     );
   }
 
@@ -87,6 +102,7 @@ class Producto {
       'costo': costo,
       'combo': combo,
       'web': web,
+      'id_moneda_costo': idMonedaCosto
     };
   }
 

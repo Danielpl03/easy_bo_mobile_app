@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:easy_bo_mobile_app/config/app_config.dart' show AppConfig;
+import 'package:easy_bo_mobile_app/config/supabase_config.dart'
+    show SupabaseConfig;
 import 'package:easy_bo_mobile_app/models/localidad.dart';
 import 'package:easy_bo_mobile_app/models/mensaje.dart';
 import 'package:easy_bo_mobile_app/models/tienda.dart';
@@ -12,6 +15,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 class TiendasProvider extends ChangeNotifier {
   final SupabaseService _supabaseService;
   final LocalStorageService _localStorageService = LocalStorageService();
+
+  String? nombreEmpresa;
 
   bool _cargando = false;
   bool get cargando => _cargando;
@@ -51,6 +56,9 @@ class TiendasProvider extends ChangeNotifier {
   }
 
   TiendasProvider(this._supabaseService) {
+    SupabaseConfig.getConfigKey().then(
+      (value) => {nombreEmpresa = AppConfig.nombresEmpresas[value]},
+    );
     getTiendasConLocalidades();
     // selectAll();
     // cargarEnSegundoPlano();
@@ -108,10 +116,7 @@ class TiendasProvider extends ChangeNotifier {
       );
     } on SocketException catch (_) {
       _mostrarMensaje(
-        Mensaje(
-          mensaje: 'Sin conexión',
-          tipoMensaje: TipoMensaje.error,
-        ),
+        Mensaje(mensaje: 'Sin conexión', tipoMensaje: TipoMensaje.error),
       );
     } on PostgrestException catch (e) {
       _mostrarMensaje(

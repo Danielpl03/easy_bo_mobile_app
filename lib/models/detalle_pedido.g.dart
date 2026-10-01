@@ -19,7 +19,7 @@ class DetallePedidoAdapter extends TypeAdapter<DetallePedido> {
     return DetallePedido(
       idPedido: fields[0] as int,
       idProducto: fields[1] as int,
-      cantidad: fields[2] as int,
+      cantidad: fields[2] as num,
     );
   }
 

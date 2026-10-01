@@ -2,7 +2,9 @@
 import 'package:easy_bo_mobile_app/models/detalle_pedido.dart';
 import 'package:easy_bo_mobile_app/models/pedido.dart';
 import 'package:easy_bo_mobile_app/models/producto.dart';
+import 'package:easy_bo_mobile_app/models/proveedor.dart';
 import 'package:easy_bo_mobile_app/models/tienda.dart' show Tienda;
+import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/pedidos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/tiendas_provider.dart';
@@ -26,11 +28,36 @@ class EditarPedidoScreen extends StatefulWidget {
 
 class _EditarPedidoScreenState extends State<EditarPedidoScreen> {
   final _observacionesController = TextEditingController();
+  Proveedor? _proveedorSeleccionado;
 
   @override
   void initState() {
     super.initState();
     _observacionesController.text = widget.pedido.observaciones ?? '';
+    _cargarProveedor();
+  }
+
+  Future<void> _cargarProveedor() async {
+    if (widget.pedido.idProveedor != null) {
+      final documentosProvider = context.read<DocumentosProvider>();
+      // Los proveedores deberían estar ya cargados en el provider
+      if (documentosProvider.proveedores.isEmpty) {
+        // Si no están cargados, esperamos un poco para que se carguen
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      try {
+        final proveedor = documentosProvider.proveedores.firstWhere(
+          (p) => p.idProveedor == widget.pedido.idProveedor,
+        );
+        if (mounted) {
+          setState(() {
+            _proveedorSeleccionado = proveedor;
+          });
+        }
+      } catch (e) {
+        // Proveedor no encontrado, dejamos _proveedorSeleccionado como null
+      }
+    }
   }
 
   @override
@@ -63,6 +90,8 @@ class _EditarPedidoScreenState extends State<EditarPedidoScreen> {
               child: Column(
                 children: [
                   _buildHeaderInfo(pedido, tienda),
+                  const Divider(),
+                  _buildProveedorSection(pedido),
                   const Divider(),
                   _buildProductosSection(pedido),
                   const SizedBox(height: 24),
@@ -100,6 +129,63 @@ class _EditarPedidoScreenState extends State<EditarPedidoScreen> {
         const SizedBox(height: 8),
         _buildEstadoChip(pedido.estado),
       ],
+    );
+  }
+
+  Widget _buildProveedorSection(Pedido pedido) {
+    return Consumer<DocumentosProvider>(
+      builder: (context, documentosProvider, _) {
+        final proveedores = documentosProvider.proveedores;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Proveedor',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.blueGrey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<Proveedor>(
+              value: _proveedorSeleccionado,
+              decoration: const InputDecoration(
+                labelText: 'Seleccionar proveedor',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.local_shipping),
+              ),
+              items: [
+                const DropdownMenuItem<Proveedor>(
+                  value: null,
+                  child: Text('Sin proveedor'),
+                ),
+                ...proveedores.map((proveedor) {
+                  return DropdownMenuItem<Proveedor>(
+                    value: proveedor,
+                    child: Text(proveedor.nombre),
+                  );
+                }),
+              ],
+              onChanged: (Proveedor? nuevoProveedor) {
+                setState(() {
+                  _proveedorSeleccionado = nuevoProveedor;
+                });
+                // Actualizar el pedido con el nuevo proveedor
+                final provider = context.read<PedidosProvider>();
+                if (provider.pedidoActual != null) {
+                  provider.setPedidoActual(
+                    provider.pedidoActual!.copyWith(
+                      idProveedor: nuevoProveedor?.idProveedor,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -240,6 +326,7 @@ class _EditarPedidoScreenState extends State<EditarPedidoScreen> {
       final pedidoActualizado = pedido.copyWith(
         observaciones: _observacionesController.text,
         estado: 'MODIFICADO',
+        idProveedor: _proveedorSeleccionado?.idProveedor,
       );
 
       pedidoActualizado.detalles = pedido.detalles;
@@ -345,7 +432,7 @@ class _EditarPedidoScreenState extends State<EditarPedidoScreen> {
     );
   }
 
-  DetallePedido _actualizarCantidad(DetallePedido detalle, int cantidad) {
+  DetallePedido _actualizarCantidad(DetallePedido detalle, num cantidad) {
     final provider = context.read<PedidosProvider>();
     final nuevoDetalle = DetallePedido(
       idPedido: provider.pedidoActual!.idPedido,

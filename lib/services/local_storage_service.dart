@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:math';
+
 import 'package:easy_bo_mobile_app/models/detalle_pedido.dart';
 import 'package:easy_bo_mobile_app/models/documento.dart';
 import 'package:easy_bo_mobile_app/models/movimiento.dart';
@@ -8,6 +10,12 @@ import 'package:easy_bo_mobile_app/models/pedido.dart';
 import 'package:easy_bo_mobile_app/models/rango_fechas.dart';
 import 'package:easy_bo_mobile_app/models/tienda.dart';
 import 'package:easy_bo_mobile_app/models/usuario.dart';
+import 'package:easy_bo_mobile_app/models/cliente.dart';
+import 'package:easy_bo_mobile_app/models/proveedor.dart';
+import 'package:easy_bo_mobile_app/models/producto_proveedor.dart';
+import 'package:easy_bo_mobile_app/models/producto_imagen.dart';
+import 'package:easy_bo_mobile_app/models/categoria.dart';
+import 'package:easy_bo_mobile_app/models/departamento.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/producto.dart';
@@ -36,7 +44,13 @@ class LocalStorageService {
   static const String _lastSyncBoxName = 'lastSync';
   static const String _rangosFechasBoxName = 'rangos_fechas';
   static const String _flujosCajaBoxName = 'flujos_caja';
-  
+  static const String _clientesBoxName = 'clientes';
+  static const String _proveedoresBoxName = 'proveedores';
+  static const String _productosProveedoresBoxName = 'productos_proveedores';
+  static const String _productosImagenesBoxName = 'productos_imagenes';
+  static const String _categoriasBoxName = 'categorias';
+  static const String _departamentosBoxName = 'departamentos';
+
   Box<Tienda>? _tiendasBox;
   Box<Localidad>? _localidadesBox;
   Box<Moneda>? _monedasBox;
@@ -49,8 +63,14 @@ class LocalStorageService {
   Box<Pedido>? _pedidosBox;
   Box<DetallePedido>? _detallesPedidoBox;
   Box<dynamic>? _lastSyncBox;
-  Box<RangoFechas>? _rangosFechasBox;
+  Box<DateTime>? _rangosFechasBox;
   Box<FlujoCaja>? _flujosCajaBox;
+  Box<Cliente>? _clientesBox;
+  Box<Proveedor>? _proveedoresBox;
+  Box<ProductoProveedor>? _productosProveedoresBox;
+  Box<ProductoImagen>? _productosImagenesBox;
+  Box<Categoria>? _categoriasBox;
+  Box<Departamento>? _departamentosBox;
   bool _isInitialized = false;
   Future<void>? _initFuture;
 
@@ -99,8 +119,20 @@ class LocalStorageService {
       if (!Hive.isAdapterRegistered(11)) {
         Hive.registerAdapter(RangoFechasAdapter());
       }
-      if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(FlujoCajaAdapter());
+      if (!Hive.isAdapterRegistered(12))
+        Hive.registerAdapter(FlujoCajaAdapter());
       if (!Hive.isAdapterRegistered(13)) Hive.registerAdapter(UsuarioAdapter());
+      if (!Hive.isAdapterRegistered(14))
+        Hive.registerAdapter(CategoriaAdapter());
+      if (!Hive.isAdapterRegistered(15))
+        Hive.registerAdapter(DepartamentoAdapter());
+      if (!Hive.isAdapterRegistered(16))
+        Hive.registerAdapter(ProveedorAdapter());
+      if (!Hive.isAdapterRegistered(17)) Hive.registerAdapter(ClienteAdapter());
+      if (!Hive.isAdapterRegistered(18))
+        Hive.registerAdapter(ProductoProveedorAdapter());
+      if (!Hive.isAdapterRegistered(19))
+        Hive.registerAdapter(ProductoImagenAdapter());
 
       // Abrir las cajas de Hive
       _tiendasBox = await Hive.openBox<Tienda>(_tiendasBoxName);
@@ -117,8 +149,20 @@ class LocalStorageService {
         _detallesPedidoBoxName,
       );
       _lastSyncBox = await Hive.openBox<dynamic>(_lastSyncBoxName);
-      _rangosFechasBox = await Hive.openBox<RangoFechas>(_rangosFechasBoxName);
+      _rangosFechasBox = await Hive.openBox<DateTime>(_rangosFechasBoxName);
       _flujosCajaBox = await Hive.openBox<FlujoCaja>(_flujosCajaBoxName);
+      _clientesBox = await Hive.openBox<Cliente>(_clientesBoxName);
+      _proveedoresBox = await Hive.openBox<Proveedor>(_proveedoresBoxName);
+      _productosProveedoresBox = await Hive.openBox<ProductoProveedor>(
+        _productosProveedoresBoxName,
+      );
+      _productosImagenesBox = await Hive.openBox<ProductoImagen>(
+        _productosImagenesBoxName,
+      );
+      _categoriasBox = await Hive.openBox<Categoria>(_categoriasBoxName);
+      _departamentosBox = await Hive.openBox<Departamento>(
+        _departamentosBoxName,
+      );
 
       _isInitialized = true;
       print('LocalStorageService inicializado correctamente');
@@ -142,6 +186,12 @@ class LocalStorageService {
       await _lastSyncBox?.close();
       await _rangosFechasBox?.close();
       await _flujosCajaBox?.close();
+      await _clientesBox?.close();
+      await _proveedoresBox?.close();
+      await _productosProveedoresBox?.close();
+      await _productosImagenesBox?.close();
+      await _categoriasBox?.close();
+      await _departamentosBox?.close();
 
       _localidadesBox = null;
       _tiendasBox = null;
@@ -155,6 +205,12 @@ class LocalStorageService {
       _lastSyncBox = null;
       _rangosFechasBox = null;
       _flujosCajaBox = null;
+      _clientesBox = null;
+      _proveedoresBox = null;
+      _productosProveedoresBox = null;
+      _productosImagenesBox = null;
+      _categoriasBox = null;
+      _departamentosBox = null;
     } catch (e) {
       print('Error al cerrar las cajas: $e');
     }
@@ -250,7 +306,7 @@ class LocalStorageService {
     return _lastSyncBox!;
   }
 
-  Box<RangoFechas> get _rangosFechasBoxInstance {
+  Box<DateTime> get _rangosFechasBoxInstance {
     if (!_isInitialized || _rangosFechasBox == null) {
       throw Exception('LocalStorageService no inicializado');
     }
@@ -262,6 +318,48 @@ class LocalStorageService {
       throw Exception('LocalStorageService no inicializado');
     }
     return _flujosCajaBox!;
+  }
+
+  Box<Cliente> get _clientesBoxInstance {
+    if (!_isInitialized || _clientesBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _clientesBox!;
+  }
+
+  Box<Proveedor> get _proveedoresBoxInstance {
+    if (!_isInitialized || _proveedoresBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _proveedoresBox!;
+  }
+
+  Box<ProductoProveedor> get _productosProveedoresBoxInstance {
+    if (!_isInitialized || _productosProveedoresBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _productosProveedoresBox!;
+  }
+
+  Box<ProductoImagen> get _productosImagenesBoxInstance {
+    if (!_isInitialized || _productosImagenesBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _productosImagenesBox!;
+  }
+
+  Box<Categoria> get _categoriasBoxInstance {
+    if (!_isInitialized || _categoriasBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _categoriasBox!;
+  }
+
+  Box<Departamento> get _departamentosBoxInstance {
+    if (!_isInitialized || _departamentosBox == null) {
+      throw Exception('LocalStorageService no inicializado');
+    }
+    return _departamentosBox!;
   }
 
   // Productos
@@ -399,35 +497,53 @@ class LocalStorageService {
   // Movimientos
   Future<List<Movimiento>> getMovimientos() async {
     await _ensureInitialized();
-    print('Obteniendo movimientos del almacenamiento local...');
-    final movimientos = _movimientosBoxInstance.values.toList();
     print(
-      'movimientos obtenidas del almacenamiento local: ${movimientos.length}',
+      '📥 [LocalStorage] Obteniendo movimientos del almacenamiento local...',
     );
+    final movimientos = _movimientosBoxInstance.values.toList();
+
+    // Contar movimientos con costo
+    final movsConCosto =
+        movimientos
+            .where((m) => m.costoProducto != null && m.costoProducto! > 0)
+            .length;
+    print(
+      '📥 [LocalStorage] Movimientos obtenidos del almacenamiento local: ${movimientos.length}',
+    );
+    print(
+      '💰 [LocalStorage] Movimientos con costo desde local: $movsConCosto de ${movimientos.length}',
+    );
+
     return movimientos;
   }
 
   Future<void> saveMovimientos(List<Movimiento> movimientos) async {
     await _ensureInitialized();
     print(
-      'Guardando ${movimientos.length} movimientos en el almacenamiento local...',
+      '💾 [LocalStorage] Guardando ${movimientos.length} movimientos en el almacenamiento local...',
     );
 
     // Obtener los IDs de los documentos relacionados con los movimientos
     final idsDocumentos = movimientos.map((m) => m.idDocumento).toSet();
 
     // Eliminar solo los movimientos relacionados con los documentos actualizados
+    int eliminados = 0;
     for (var key in _movimientosBoxInstance.keys) {
       final mov = _movimientosBoxInstance.get(key);
       if (mov != null && idsDocumentos.contains(mov.idDocumento)) {
         await _movimientosBoxInstance.delete(key);
+        eliminados++;
       }
     }
+    print('🗑️ [LocalStorage] Movimientos eliminados: $eliminados');
 
     // Guardar los nuevos movimientos
     await _movimientosBoxInstance.addAll(movimientos);
+
     await _updateLastSync('movimientos');
-    print('movimientos guardadas correctamente en el almacenamiento local');
+    print(
+      '✅ [LocalStorage] Movimientos guardados correctamente en el almacenamiento local',
+    );
   }
 
   // Localidades
@@ -557,66 +673,57 @@ class LocalStorageService {
     return lastSync != null ? DateTime.parse(lastSync) : null;
   }
 
-  Future<List<RangoFechas>> getRangosFechas() async {
+  Future<List<DateTime>> getRangosFechas() async {
     await _ensureInitialized();
     final rangos = _rangosFechasBoxInstance.values.toList();
     print('📅 [LocalStorage] Rangos de fechas almacenados: ${rangos.length}');
     for (var rango in rangos) {
-      print('  - ${rango.inicio} a ${rango.fin}');
+      print(rango);
     }
     return rangos;
   }
 
-  Future<void> agregarRangoFechas(RangoFechas nuevoRango) async {
+  /// Guarda o actualiza la fecha para un mes específico
+  /// Para meses completos: guarda el primer día del mes (anio, mes, 1)
+  /// Para mes actual parcial: guarda la última fecha descargada
+  Future<void> guardarFechaParaMes(int anio, int mes, DateTime fecha) async {
     await _ensureInitialized();
+    // Usar una clave única basada en anio-mes para evitar duplicados
+    final clave = '${anio}_${mes}';
 
-    // Validar que el rango no sea futuro
-    final ahora = DateTime.now();
-    if (nuevoRango.inicio.isAfter(ahora)) {
-      print(
-        '⚠️ [LocalStorage] Intento de agregar rango futuro: ${nuevoRango.inicio}',
-      );
-      return;
-    }
-
-    // Convertir el nuevo rango a un rango de mes completo
-    final rangoMesCompleto = _getPrimerYUltimoDiaDelMes(nuevoRango.inicio);
-
-    // Ajustar el fin del mes si se extiende más allá del día actual
-    DateTime finMesAjustado = rangoMesCompleto.end;
-    if (finMesAjustado.isAfter(ahora)) {
-      finMesAjustado = DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59);
-    }
-
-    var rangoAjustado = RangoFechas(
-      inicio: rangoMesCompleto.start,
-      fin: finMesAjustado,
-    );
-
-    print(
-      '📅 [LocalStorage] Intentando agregar/unir rango: ${rangoAjustado.inicio} - ${rangoAjustado.fin}',
-    );
-
-    final rangosExistentes = await getRangosFechas();
-    bool cubierto = false;
-    for (var rangoGuardado in rangosExistentes) {
-      if (isBeforeOrEqual(rangoAjustado.inicio, rangoGuardado.inicio) &&
-          isAfterOrEqual(rangoAjustado.fin, rangoGuardado.fin)) {
-        cubierto = true;
-        print(
-          'ℹ️ [LocalStorage] Rango ${rangoAjustado.inicio} - ${rangoAjustado.fin} ya cubierto por ${rangoGuardado.inicio} - ${rangoGuardado.fin}',
-        );
-        break;
+    // Eliminar fecha anterior si existe (usando la clave directamente)
+    if (_rangosFechasBoxInstance.containsKey(clave)) {
+      await _rangosFechasBoxInstance.delete(clave);
+    } else {
+      // Si no existe con la clave string, buscar por valores (compatibilidad con datos antiguos)
+      final fechaAnterior = await _getFechaGuardadaParaMes(anio, mes);
+      if (fechaAnterior != null) {
+        // Buscar y eliminar la fecha anterior usando cualquier tipo de clave
+        for (var key in _rangosFechasBoxInstance.keys) {
+          final fechaGuardada = _rangosFechasBoxInstance.get(key);
+          if (fechaGuardada != null &&
+              fechaGuardada.year == anio &&
+              fechaGuardada.month == mes) {
+            await _rangosFechasBoxInstance.delete(key);
+            break;
+          }
+        }
       }
     }
 
-    if (!cubierto) {
-      await _rangosFechasBoxInstance.add(rangoAjustado);
-      print('➕ [LocalStorage] Rango agregado: ${rangoAjustado.inicio} - ${rangoAjustado.fin}');
-    } else {
-      print('✅ [LocalStorage] Rango ya existente o cubierto, no se agregó');
+    // Guardar la nueva fecha
+    await _rangosFechasBoxInstance.put(clave, fecha);
+  }
+
+  /// Agrega rangos de fechas (método legacy, mantener para compatibilidad)
+  /// Ahora usa guardarFechaParaMes internamente
+  Future<void> agregarRangoFechas(List<DateTime> fechas) async {
+    await _ensureInitialized();
+    // Este método ahora se usa principalmente para meses completos
+    // donde cada DateTime representa el primer día del mes
+    for (var fecha in fechas) {
+      await guardarFechaParaMes(fecha.year, fecha.month, fecha);
     }
-    print('✅ [LocalStorage] Rangos actualizados correctamente');
   }
 
   bool isAfterOrEqual(DateTime first, DateTime second) {
@@ -627,76 +734,106 @@ class LocalStorageService {
     return first.isBefore(second) || first.isAtSameMomentAs(second);
   }
 
-  DateTimeRange _getPrimerYUltimoDiaDelMes(DateTime fecha) {
-    final primerDiaMes = DateTime(fecha.year, fecha.month, 1);
-    final ultimoDiaMes = DateTime(
-      fecha.year,
-      fecha.month + 1,
-      0,
-      23,
-      59,
-      59,
-    );
-    return DateTimeRange(start: primerDiaMes, end: ultimoDiaMes);
+  /// Obtiene el primer día de cada mes contenido en el rango de fechas
+  /// Para el mes actual, devuelve el primer día del mes (no la fecha actual)
+  List<DateTime> _getMeses(DateTime fechaInicio, DateTime fechaFin) {
+    List<DateTime> meses = [];
+    DateTime fechaActual = DateTime(fechaInicio.year, fechaInicio.month, 1);
+    DateTime fechaFinMes = DateTime(fechaFin.year, fechaFin.month, 1);
+
+    // Agregar el primer mes
+    meses.add(fechaActual);
+
+    // Agregar meses intermedios
+    while (fechaActual.isBefore(fechaFinMes)) {
+      fechaActual = DateTime(fechaActual.year, fechaActual.month + 1, 1);
+      meses.add(fechaActual);
+    }
+
+    return meses;
   }
 
-  Future<List<DateTimeRange>> getRangosFaltantes(
+  /// Obtiene la fecha guardada para un mes específico (anio-mes)
+  /// Retorna null si el mes no está guardado
+  /// Busca primero por la clave string, luego por valores (compatibilidad)
+  Future<DateTime?> _getFechaGuardadaParaMes(int anio, int mes) async {
+    await _ensureInitialized();
+    final clave = '${anio}_${mes}';
+
+    // Buscar primero por la clave string (método preferido)
+    if (_rangosFechasBoxInstance.containsKey(clave)) {
+      return _rangosFechasBoxInstance.get(clave);
+    }
+
+    // Buscar por valores (compatibilidad con datos antiguos)
+    final rangosExistentes = await getRangosFechas();
+    for (var fechaGuardada in rangosExistentes) {
+      if (fechaGuardada.year == anio && fechaGuardada.month == mes) {
+        return fechaGuardada;
+      }
+    }
+    return null;
+  }
+
+  /// Obtiene la última fecha descargada del mes actual
+  /// Retorna null si el mes actual no tiene datos descargados
+  Future<DateTime?> getUltimaFechaMesActual() async {
+    await _ensureInitialized();
+    final ahora = DateTime.now();
+    return await _getFechaGuardadaParaMes(ahora.year, ahora.month);
+  }
+
+  /// Verifica si un mes completo está descargado
+  /// Un mes está completo si tiene guardado el primer día del mes
+  bool _esMesCompleto(DateTime fechaGuardada, int anio, int mes) {
+    return fechaGuardada.year == anio &&
+        fechaGuardada.month == mes &&
+        fechaGuardada.day == 1;
+  }
+
+  Future<List<DateTime>> getRangosFaltantes(
     DateTimeRange rangoSolicitado,
   ) async {
     await _ensureInitialized();
-
+    final rangoMeses = _getMeses(rangoSolicitado.start, rangoSolicitado.end);
+    List<DateTime> rangosFaltantes = [];
     final ahora = DateTime.now();
-    if (rangoSolicitado.start.isAfter(ahora)) {
-      print('⚠️ [LocalStorage] Intento de obtener rangos futuros');
-      return [];
-    }
 
-    final rangosAlmacenados = await getRangosFechas();
-    List<DateTimeRange> rangosFaltantes = [];
+    for (var primerDiaMes in rangoMeses) {
+      final anio = primerDiaMes.year;
+      final mes = primerDiaMes.month;
+      final esMesActual = anio == ahora.year && mes == ahora.month;
 
-    // Iterar por cada mes en el rango solicitado
-    DateTime fechaActual = DateTime(
-      rangoSolicitado.start.year,
-      rangoSolicitado.start.month,
-      1,
-    );
+      final fechaGuardada = await _getFechaGuardadaParaMes(anio, mes);
 
-    while (isBeforeOrEqual(fechaActual, rangoSolicitado.end)) {
-      final rangoMes = _getPrimerYUltimoDiaDelMes(fechaActual);
+      if (fechaGuardada == null) {
+        // Mes no descargado, agregar a faltantes
+        rangosFaltantes.add(primerDiaMes);
+      } else if (esMesActual) {
+        // Para el mes actual, verificar si necesita actualización
+        // Si la fecha guardada es anterior a hoy, necesita actualización
+        final fechaHoy = DateTime(ahora.year, ahora.month, ahora.day);
+        final fechaGuardadaSinHora = DateTime(
+          fechaGuardada.year,
+          fechaGuardada.month,
+          fechaGuardada.day,
+        );
 
-      // Ajustar el fin del mes si se extiende más allá del rango solicitado o del día actual
-      DateTime finMesAjustado = rangoMes.end;
-      if (finMesAjustado.isAfter(ahora)) {
-        finMesAjustado = DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59);
-      }
-
-      final rangoMesAjustado = DateTimeRange(
-        start: rangoMes.start,
-        end: finMesAjustado,
-      );
-
-      bool cubierto = false;
-      for (var rangoGuardado in rangosAlmacenados) {
-        // Verificar si el rango guardado cubre completamente el mes ajustado
-        if (isBeforeOrEqual(rangoMesAjustado.start, rangoGuardado.inicio) &&
-            isAfterOrEqual(rangoMesAjustado.end, rangoGuardado.fin)) {
-          cubierto = true;
-          break;
+        if (fechaGuardadaSinHora.isBefore(fechaHoy)) {
+          // Necesita actualización incremental
+          rangosFaltantes.add(primerDiaMes);
         }
+        // Si la fecha guardada es hoy o posterior, el mes está actualizado
+      } else {
+        // Para meses pasados, verificar si está completo
+        if (!_esMesCompleto(fechaGuardada, anio, mes)) {
+          // Mes parcial, necesita descarga completa
+          rangosFaltantes.add(primerDiaMes);
+        }
+        // Si es completo (día 1), no necesita descarga
       }
-
-      if (!cubierto) {
-        rangosFaltantes.add(rangoMesAjustado);
-      }
-
-      // Avanzar al siguiente mes
-      fechaActual = DateTime(fechaActual.year, fechaActual.month + 1, 1);
     }
 
-    print('📊 [LocalStorage] Total rangos faltantes: ${rangosFaltantes.length}');
-    for (var rango in rangosFaltantes) {
-      print('  - Faltante: ${rango.start} a ${rango.end}');
-    }
     return rangosFaltantes;
   }
 
@@ -711,10 +848,181 @@ class LocalStorageService {
 
   Future<void> saveFlujosCaja(List<FlujoCaja> flujos) async {
     await _ensureInitialized();
-    print('Guardando ${flujos.length} flujos de caja en el almacenamiento local...');
-    await _flujosCajaBoxInstance.clear();
-    await _flujosCajaBoxInstance.addAll(flujos);
+    print(
+      'Guardando ${flujos.length} flujos de caja en el almacenamiento local...',
+    );
+    await _flujosCajaBoxInstance.putAll({
+      for (FlujoCaja fc in flujos) fc.idFlujo: fc,
+    });
     await _updateLastSync('flujos_caja');
     print('Flujos de caja guardados correctamente.');
+  }
+
+  // Clientes
+  Future<List<Cliente>> getClientes() async {
+    await _ensureInitialized();
+    print('Obteniendo clientes del almacenamiento local...');
+    final clientes = _clientesBoxInstance.values.toList();
+    print('Clientes obtenidos del almacenamiento local: ${clientes.length}');
+    return clientes;
+  }
+
+  Future<void> saveClientes(List<Cliente> clientes) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${clientes.length} clientes en el almacenamiento local...',
+    );
+    await _clientesBoxInstance.clear();
+    await _clientesBoxInstance.addAll(clientes);
+    await _updateLastSync('clientes');
+    print('Clientes guardados correctamente en el almacenamiento local');
+  }
+
+  // Proveedores
+  Future<List<Proveedor>> getProveedores() async {
+    await _ensureInitialized();
+    print('Obteniendo proveedores del almacenamiento local...');
+    final proveedores = _proveedoresBoxInstance.values.toList();
+    print(
+      'Proveedores obtenidos del almacenamiento local: ${proveedores.length}',
+    );
+    return proveedores;
+  }
+
+  Future<void> saveProveedores(List<Proveedor> proveedores) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${proveedores.length} proveedores en el almacenamiento local...',
+    );
+    await _proveedoresBoxInstance.clear();
+    await _proveedoresBoxInstance.addAll(proveedores);
+    await _updateLastSync('proveedores');
+    print('Proveedores guardados correctamente en el almacenamiento local');
+  }
+
+  // Productos Proveedores
+  Future<List<ProductoProveedor>> getProductosProveedores() async {
+    await _ensureInitialized();
+    print('Obteniendo productos proveedores del almacenamiento local...');
+    final productosProveedores =
+        _productosProveedoresBoxInstance.values.toList();
+    print(
+      'Productos proveedores obtenidos del almacenamiento local: ${productosProveedores.length}',
+    );
+    return productosProveedores;
+  }
+
+  Future<void> saveProductosProveedores(
+    List<ProductoProveedor> productosProveedores, {
+    bool removeOthers = true,
+  }) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${productosProveedores.length} productos proveedores en el almacenamiento local...',
+    );
+    if (removeOthers) {
+      await _productosProveedoresBoxInstance.clear();
+      await _productosProveedoresBoxInstance.putAll({
+        for (ProductoProveedor pp in productosProveedores) pp.idRelacion: pp,
+      });
+    } else {
+      for (ProductoProveedor pp in productosProveedores) {
+        if (_productosProveedoresBoxInstance.containsKey(pp.idRelacion)) {
+          _productosProveedoresBoxInstance.delete(pp.idRelacion);
+        }
+        await _productosProveedoresBoxInstance.put(pp.idRelacion, pp);
+      }
+    }
+    await _updateLastSync('productos_proveedores');
+    print(
+      'Productos proveedores guardados correctamente en el almacenamiento local',
+    );
+  }
+
+  // Productos Imagenes
+  Future<List<ProductoImagen>> getProductosImagenes() async {
+    await _ensureInitialized();
+    print('Obteniendo productos imagenes del almacenamiento local...');
+    final imagenes = _productosImagenesBoxInstance.values.toList();
+    print(
+      'Productos imagenes obtenidos del almacenamiento local: ${imagenes.length}',
+    );
+    return imagenes;
+  }
+
+  Future<void> saveProductosImagenes(
+    List<ProductoImagen> imagenes, {
+    bool removeOthers = true,
+  }) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${imagenes.length} productos imagenes en el almacenamiento local...',
+    );
+    if (removeOthers) {
+      await _productosImagenesBoxInstance.clear();
+      await _productosImagenesBoxInstance.putAll({
+        for (ProductoImagen img in imagenes) img.idRelacion: img,
+      });
+    } else {
+      for (ProductoImagen img in imagenes) {
+        if (_productosImagenesBoxInstance.containsKey(img.idRelacion)) {
+          _productosImagenesBoxInstance.delete(img.idRelacion);
+        }
+        await _productosImagenesBoxInstance.put(img.idRelacion, img);
+      }
+    }
+    await _updateLastSync('productos_imagenes');
+    print(
+      'Productos imagenes guardados correctamente en el almacenamiento local',
+    );
+  }
+
+  Future<void> deleteProductoImagenLocal(int idRelacion) async {
+    await _ensureInitialized();
+    await _productosImagenesBoxInstance.delete(idRelacion);
+  }
+
+  // Categorias
+  Future<List<Categoria>> getCategorias() async {
+    await _ensureInitialized();
+    print('Obteniendo categorias del almacenamiento local...');
+    final categorias = _categoriasBoxInstance.values.toList();
+    print(
+      'Categorias obtenidas del almacenamiento local: ${categorias.length}',
+    );
+    return categorias;
+  }
+
+  Future<void> saveCategorias(List<Categoria> categorias) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${categorias.length} categorias en el almacenamiento local...',
+    );
+    await _categoriasBoxInstance.clear();
+    await _categoriasBoxInstance.addAll(categorias);
+    await _updateLastSync('categorias');
+    print('Categorias guardadas correctamente en el almacenamiento local');
+  }
+
+  // Departamentos
+  Future<List<Departamento>> getDepartamentos() async {
+    await _ensureInitialized();
+    print('Obteniendo departamentos del almacenamiento local...');
+    final departamentos = _departamentosBoxInstance.values.toList();
+    print(
+      'Departamentos obtenidos del almacenamiento local: ${departamentos.length}',
+    );
+    return departamentos;
+  }
+
+  Future<void> saveDepartamentos(List<Departamento> departamentos) async {
+    await _ensureInitialized();
+    print(
+      'Guardando ${departamentos.length} departamentos en el almacenamiento local...',
+    );
+    await _departamentosBoxInstance.clear();
+    await _departamentosBoxInstance.addAll(departamentos);
+    await _updateLastSync('departamentos');
+    print('Departamentos guardados correctamente en el almacenamiento local');
   }
 }

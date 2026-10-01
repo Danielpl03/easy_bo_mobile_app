@@ -23,7 +23,7 @@ class DocumentoAdapter extends TypeAdapter<Documento> {
       razon: fields[3] as String,
       comentario: fields[4] as String?,
       idLocalidad: fields[5] as int?,
-      importe: fields[6] as num,
+      importe: fields[6] as num?,
       descuento: fields[7] as num?,
       idSistema: fields[8] as int,
       idUsuario: fields[9] as int,
@@ -31,13 +31,16 @@ class DocumentoAdapter extends TypeAdapter<Documento> {
       idLocalidadDestino: fields[11] as int?,
       idDocumento: fields[12] as String,
       cancelado: fields[13] as bool,
+      costo: fields[14] as num?,
+      idCliente: fields[15] as int?,
+      idProveedor: fields[16] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Documento obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.consec)
       ..writeByte(1)
@@ -65,7 +68,13 @@ class DocumentoAdapter extends TypeAdapter<Documento> {
       ..writeByte(12)
       ..write(obj.idDocumento)
       ..writeByte(13)
-      ..write(obj.cancelado);
+      ..write(obj.cancelado)
+      ..writeByte(14)
+      ..write(obj.costo)
+      ..writeByte(15)
+      ..write(obj.idCliente)
+      ..writeByte(16)
+      ..write(obj.idProveedor);
   }
 
   @override

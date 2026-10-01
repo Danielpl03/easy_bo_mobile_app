@@ -20,6 +20,9 @@ class Pedido {
   @HiveField(4)
   final String? observaciones;
 
+  @HiveField(5)
+  final int? idProveedor;
+
   List<DetallePedido> detalles = [];
 
   Pedido({
@@ -28,6 +31,7 @@ class Pedido {
     required this.idTienda,
     this.estado = 'PENDIENTE',
     this.observaciones,
+    this.idProveedor,
     detalles = const []
   });
 
@@ -38,6 +42,7 @@ class Pedido {
       idTienda: json['id_tienda'] as int,
       estado: json['estado'] as String,
       observaciones: json['observaciones'] as String?,
+      idProveedor: json['id_proveedor'] as int?,
       detalles: (json['detalles'] as List) 
           .map((d) => DetallePedido.fromJson(d))
           .toList(),
@@ -50,6 +55,7 @@ class Pedido {
     int? idTienda,
     String? estado,
     String? observaciones,
+    int? idProveedor,
     List<DetallePedido>? detalles,
   }) {
     return Pedido(
@@ -58,6 +64,7 @@ class Pedido {
       idTienda: idTienda ?? this.idTienda,
       estado: estado ?? this.estado,
       observaciones: observaciones ?? this.observaciones,
+      idProveedor: idProveedor ?? this.idProveedor,
       detalles: detalles ?? this.detalles,
     );
   }
@@ -69,6 +76,7 @@ class Pedido {
       'id_tienda': idTienda,
       'estado': estado,
       'observaciones': observaciones,
+      'id_proveedor': idProveedor,
       'detalles' : detalles
     };
   }

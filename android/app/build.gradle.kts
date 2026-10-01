@@ -7,17 +7,17 @@ plugins {
 
 android {
     namespace = "com.dpl03.easy_bo_mobile_app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "29.0.13113456"
+    compileSdk = 36
+    ndkVersion = "29.0.14206865"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -26,9 +26,9 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = 35
-        versionName = "1.3.5"
+        targetSdk = 36
+        versionCode = 55
+        versionName = "1.5.5"
     }
 
     buildTypes {

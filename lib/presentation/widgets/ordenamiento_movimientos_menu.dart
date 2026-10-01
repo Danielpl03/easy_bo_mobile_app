@@ -5,30 +5,56 @@ import 'package:provider/provider.dart';
 
 class OrdenamientoMovimientosMenu extends StatelessWidget {
   final Documento documento;
-  
+
   const OrdenamientoMovimientosMenu({super.key, required this.documento});
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<VentasProvider>();
-    final ordenActual = provider.getOrdenMov(documento.idDocumento) ?? OrdenMovimientos.alfabetico;
+    final ordenActual =
+        provider.getOrdenMov(documento.idDocumento) ??
+        OrdenMovimientos.alfabetico;
 
     return PopupMenuButton<OrdenMovimientos>(
       icon: Icon(Icons.sort, size: 18),
-      onSelected: (orden) => provider.cambiarOrdenMovimientos(documento.idDocumento, orden),
-      itemBuilder: (context) => [
-        _buildItem(OrdenMovimientos.alfabetico, 'Nombre', Icons.sort_by_alpha, ordenActual),
-        _buildItem(OrdenMovimientos.importe, 'Importe', Icons.money, ordenActual),
-        _buildItem(OrdenMovimientos.cantidad, 'Cantidad', Icons.format_list_numbered, ordenActual),
-      ],
+      onSelected:
+          (orden) =>
+              provider.cambiarOrdenMovimientos(documento.idDocumento, orden),
+      itemBuilder:
+          (context) => [
+            _buildItem(
+              OrdenMovimientos.alfabetico,
+              'Nombre',
+              Icons.sort_by_alpha,
+              ordenActual,
+            ),
+            _buildItem(
+              OrdenMovimientos.importe,
+              'Importe',
+              Icons.money,
+              ordenActual,
+            ),
+            _buildItem(
+              OrdenMovimientos.cantidad,
+              'Cantidad',
+              Icons.format_list_numbered,
+              ordenActual,
+            ),
+            _buildItem(
+              OrdenMovimientos.ganancia,
+              'Ganancia',
+              Icons.attach_money,
+              ordenActual,
+            ),
+          ],
     );
   }
 
   PopupMenuItem<OrdenMovimientos> _buildItem(
-    OrdenMovimientos orden, 
-    String texto, 
+    OrdenMovimientos orden,
+    String texto,
     IconData icono,
-    OrdenMovimientos actual
+    OrdenMovimientos actual,
   ) {
     return PopupMenuItem(
       value: orden,
@@ -43,7 +69,7 @@ class OrdenamientoMovimientosMenu extends StatelessWidget {
           Text(
             texto,
             style: TextStyle(
-              color: orden == actual ? Colors.blue : Colors.black,
+              color: orden == actual ? Colors.blue : Colors.white,
             ),
           ),
         ],

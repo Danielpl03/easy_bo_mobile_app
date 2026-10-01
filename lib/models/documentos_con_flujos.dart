@@ -41,12 +41,15 @@ class DocumentoDTO {
   final String? comentario;
   final int? idLocalidad;
   final int? idLocalidadDestino;
-  final double importe;
+  final num? importe;
+  final num? costo;
   final double descuento;
   final int? idSistema;
   final int? idUsuario;
   final int consec;
   final bool cancelado;
+  final int? idCliente;
+  final int? idProveedor;
   List<MovimientoDTO> movimientos;
   List<FlujoCajaDTO> flujosCajas;
 
@@ -66,6 +69,9 @@ class DocumentoDTO {
     required this.cancelado,
     this.movimientos = const [],
     this.flujosCajas = const [],
+    this.costo,
+    this.idCliente,
+    this.idProveedor,
   });
 
   factory DocumentoDTO.fromJson(Map<String, dynamic> json) {
@@ -81,7 +87,7 @@ class DocumentoDTO {
       comentario: json['comentario'],
       idLocalidad: json['idLocalidad'],
       idLocalidadDestino: json['idLocalidadDestino'],
-      importe: (json['importe'] as num).toDouble(),
+      importe: json['importe'] as num?,
       descuento: (json['descuento'] as num).toDouble(),
       idSistema: json['idSistema'],
       idUsuario: json['idUsuario'],
@@ -95,6 +101,9 @@ class DocumentoDTO {
           (json['flujosCajas'] as List)
               .map((e) => FlujoCajaDTO.fromJson(e))
               .toList(),
+      costo: json['costo'] as num?,
+      idCliente: json['idCliente'],
+      idProveedor: json['idProveedor'],
     );
   }
 
@@ -112,7 +121,10 @@ class DocumentoDTO {
       'id_usuario': idUsuario,
       'consec': consec,
       'cancelado': cancelado,
+      'costo': costo,
       // Los movimientos y flujos de caja se insertarán/actualizarán por separado
+      'id_cliente': idCliente,
+      'id_proveedor': idProveedor,
     };
   }
 }
@@ -121,12 +133,13 @@ class MovimientoDTO {
   final int idMovimiento;
   final ProductoDTO producto;
   final String idDocumento;
-  final int cantidad;
+  final num cantidad;
   final int? idPago;
-  final double precioProducto;
-  final double importe;
+  final num? precioProducto;
+  final num? importe;
+  final num? costoProducto;
   final double descuento;
-  final int? saldoProducto;
+  final num? saldoProducto;
   final bool espejo;
 
   MovimientoDTO({
@@ -140,6 +153,7 @@ class MovimientoDTO {
     required this.descuento,
     this.saldoProducto,
     required this.espejo,
+    this.costoProducto,
   });
 
   factory MovimientoDTO.fromJson(Map<String, dynamic> json) {
@@ -147,13 +161,14 @@ class MovimientoDTO {
       idMovimiento: json['idMovimiento'],
       producto: ProductoDTO.fromJson(json['producto']),
       idDocumento: json['idDocumento'],
-      cantidad: json['cantidad'],
+      cantidad: json['cantidad'] as num,
       idPago: json['idPago'],
-      precioProducto: (json['precio_producto'] as num).toDouble(),
-      importe: (json['importe'] as num).toDouble(),
+      precioProducto: json['precio_producto'] as num?,
+      importe: json['importe'] as num?,
       descuento: (json['descuento'] as num).toDouble(),
-      saldoProducto: json['saldoProducto'],
+      saldoProducto: json['saldoProducto'] as num?,
       espejo: json['espejo'],
+      costoProducto: json['costoProducto'] as num?,
     );
   }
 
@@ -169,6 +184,7 @@ class MovimientoDTO {
       'descuento': descuento,
       'saldo_producto': saldoProducto,
       'espejo': espejo,
+      'costo_producto': costoProducto,
     };
   }
 
@@ -183,22 +199,24 @@ class MovimientoDTO {
       'descuento': descuento,
       'saldo_producto': saldoProducto,
       'espejo': espejo,
+      'costo_producto': costoProducto,
     };
   }
 }
 
 class ProductoDTO {
-    final int idProducto;
-    final String descripcion;
-    final String? codigo;
-    final int idDepartamento;
-    final bool ipv;
-    final int? idCategoria;
-    final bool activo;
-    final String? barcode;
-    final double? costo;
-    final bool combo;
-    final bool web;
+  final int idProducto;
+  final String descripcion;
+  final String? codigo;
+  final int idDepartamento;
+  final int? idMonedaCosto;
+  final bool ipv;
+  final int? idCategoria;
+  final bool activo;
+  final String? barcode;
+  final num? costo;
+  final bool combo;
+  final bool web;
 
   List<PrecioDTO> precios = [];
   List<StockDTO> stocks = [];
@@ -215,6 +233,7 @@ class ProductoDTO {
     this.costo,
     required this.combo,
     required this.web,
+    this.idMonedaCosto,
   });
 
   factory ProductoDTO.fromJson(Map<String, dynamic> json) {
@@ -228,9 +247,10 @@ class ProductoDTO {
       idCategoria: json['idCategoria'] as int?,
       activo: json['activo'] as bool,
       barcode: json['barcode'] as String?,
-      costo: (json['costo'] as num?)?.toDouble(),
+      costo: json['costo'] as num?,
       combo: json['combo'] as bool,
       web: json['web'] as bool? ?? false,
+      idMonedaCosto: json['idMonedaCosto'] as int?,
     );
   }
 
@@ -247,6 +267,7 @@ class ProductoDTO {
       'costo': costo,
       'combo': combo,
       'web': web,
+      'id_moneda_costo': idMonedaCosto,
     };
   }
 }
@@ -255,7 +276,7 @@ class PrecioDTO {
   final int? idPrecio;
   final int idProducto;
   final int idMoneda;
-  final double precio;
+  final num precio;
 
   PrecioDTO({
     required this.idPrecio,
@@ -269,23 +290,20 @@ class PrecioDTO {
       idPrecio: json['idPrecio'] as int,
       idProducto: json['idProducto'] as int,
       idMoneda: json['idMoneda'] as int,
-      precio: (json['precio'] as num).toDouble(),
+      precio: json['precio'] as num,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id_producto': idProducto,
-      'id_moneda': idMoneda,
-      'precio': precio,
-    };
+    return {'id_producto': idProducto, 'id_moneda': idMoneda, 'precio': precio};
   }
 }
 
 class StockDTO {
   final int? idStock;
   final int idLocalidad;
-  final int idProducto;  final int stock;
+  final int idProducto;
+  final num stock;
 
   StockDTO({
     required this.idStock,
@@ -299,7 +317,7 @@ class StockDTO {
       idStock: json['idStock'] as int,
       idLocalidad: json['idLocalidad'] as int,
       idProducto: json['idProducto'] as int,
-      stock: json['stock'] as int,
+      stock: json['stock'] as num,
     );
   }
 
@@ -336,7 +354,7 @@ class FlujoCajaDTO {
     this.monto,
     required this.idLocalidad,
     required this.idSistema,
-    required this.idUsuario
+    required this.idUsuario,
   });
 
   factory FlujoCajaDTO.fromJson(Map<String, dynamic> json) {

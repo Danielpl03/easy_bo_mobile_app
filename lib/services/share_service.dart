@@ -110,24 +110,41 @@ class ShareService {
 
       // Agregar imagen si está seleccionada
       if (shareOptions['Imagen'] == true) {
-        final imageUrl = _imageService.getProductImageUrl(producto);
-        
-        // Intenta obtener la imagen de la caché
-        File? cachedImageFile = await DefaultCacheManager().getSingleFile(imageUrl);
+        try {
+          final imageUrl = _imageService.getProductImageUrl(producto);
+          if (imageUrl.isEmpty) {
+            throw Exception('El producto no tiene imagen registrada');
+          }
 
-        if (await cachedImageFile.exists()) {
-          // Usar imagen de la caché si existe
-          files.add(XFile(cachedImageFile.path));
-        } else {
-          // Descargar imagen si no está en caché
-          final response = await http.get(Uri.parse(imageUrl));
-          if (response.statusCode == 200) {
-            final tempDir = await getTemporaryDirectory();
-            final file = File(
-              '${tempDir.path}/producto_${producto.idProducto}.jpg',
+          // Intenta obtener la imagen de la caché
+          File? cachedImageFile = await DefaultCacheManager().getSingleFile(
+            imageUrl,
+          );
+
+          if (await cachedImageFile.exists()) {
+            // Usar imagen de la caché si existe
+            files.add(XFile(cachedImageFile.path));
+          } else {
+            // Descargar imagen si no está en caché
+            final response = await http.get(Uri.parse(imageUrl));
+            if (response.statusCode == 200) {
+              final tempDir = await getTemporaryDirectory();
+              final file = File(
+                '${tempDir.path}/producto_${producto.idProducto}.jpg',
+              );
+              await file.writeAsBytes(response.bodyBytes);
+              files.add(XFile(file.path));
+            }
+          }
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('No se pudo obtner la imagen del producto'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 2),
+              ),
             );
-            await file.writeAsBytes(response.bodyBytes);
-            files.add(XFile(file.path));
           }
         }
       }
@@ -157,7 +174,7 @@ class ShareService {
             'Precio: \$${NumberFormat('#,##0.00', 'es_MX').format(precio.precio)}\n';
       }
       if (shareOptions['Stock Total'] == true) {
-        final stockTotal = producto.stocks.fold<int>(
+        final stockTotal = producto.stocks.fold<num>(
           0,
           (sum, stock) => sum + stock.stock,
         );

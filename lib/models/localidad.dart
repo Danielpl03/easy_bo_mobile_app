@@ -12,12 +12,15 @@ class Localidad {
   final int idTienda;
   @HiveField(3)
   final String tipo;
+  @HiveField(4)
+  final bool ipv;
 
   Localidad({
     required this.idLocalidad,
     required this.localidad,
     required this.idTienda,
     required this.tipo,
+    required this.ipv,
   });
 
   factory Localidad.fromJson(Map<String, dynamic> json) {
@@ -26,6 +29,7 @@ class Localidad {
       localidad: json['localidad'] as String,
       idTienda: json['id_tienda'] as int,
       tipo: json['tipo'] as String,
+      ipv: json['ipv'] as bool,
     );
   }
 
@@ -35,6 +39,7 @@ class Localidad {
       'localidad': localidad,
       'id_tienda': idTienda,
       'tipo': tipo,
+      'ipv': ipv
     };
   }
 }

@@ -1,8 +1,14 @@
 // [file name]: crear_pedido_screen.dart
 import 'package:easy_bo_mobile_app/models/detalle_pedido.dart';
 import 'package:easy_bo_mobile_app/models/producto.dart';
+import 'package:easy_bo_mobile_app/models/producto_proveedor.dart';
+import 'package:easy_bo_mobile_app/models/proveedor.dart';
+import 'package:easy_bo_mobile_app/presentation/providers/documentos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/pedidos_provider.dart';
 import 'package:easy_bo_mobile_app/presentation/providers/productos_provider.dart';
+import 'package:easy_bo_mobile_app/services/local_storage_service.dart';
+import 'package:easy_bo_mobile_app/services/supabase_service.dart';
+import 'package:easy_bo_mobile_app/config/supabase_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,12 +24,98 @@ class CrearPedidoScreen extends StatefulWidget {
 class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  Proveedor? _proveedorSeleccionado;
+  List<Producto> _productosSugeridos = [];
+  final LocalStorageService _localStorageService = LocalStorageService();
+  final SupabaseService _supabaseService = SupabaseService(SupabaseConfig.client);
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _initializePedido();
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _cargarProveedorDelPedido();
+  }
+
+  Future<void> _cargarProveedorDelPedido() async {
+    final pedidosProvider = context.read<PedidosProvider>();
+    if (pedidosProvider.pedidoActual?.idProveedor != null) {
+      final documentosProvider = context.read<DocumentosProvider>();
+      try {
+        final proveedor = documentosProvider.proveedores.firstWhere(
+          (p) => p.idProveedor == pedidosProvider.pedidoActual!.idProveedor,
+        );
+        if (mounted) {
+          setState(() {
+            _proveedorSeleccionado = proveedor;
+          });
+          await _cargarProductosSugeridos(proveedor);
+        }
+      } catch (e) {
+        // Proveedor no encontrado
+      }
+    }
+  }
+
+  Future<void> _cargarProductosSugeridos(Proveedor proveedor) async {
+    try {
+      // Cargar productos proveedores
+      List<ProductoProveedor> productosProveedores =
+          await _localStorageService.getProductosProveedores();
+      
+      if (productosProveedores.isEmpty) {
+        productosProveedores = await _supabaseService.getProductosProveedores();
+        await _localStorageService.saveProductosProveedores(productosProveedores);
+      }
+
+      // Filtrar relaciones del proveedor seleccionado
+      final relacionesProveedor = productosProveedores
+          .where((pp) => pp.idProveedor == proveedor.idProveedor)
+          .toList();
+
+      // Obtener productos del provider
+      final productosProvider = context.read<ProductosProvider>();
+      if (productosProvider.productos.isEmpty) {
+        await productosProvider.getProductos();
+      }
+
+      // Crear lista con productos del proveedor y calcular stock total
+      final productosCompletos = <Map<String, dynamic>>[];
+      for (final relacion in relacionesProveedor) {
+        try {
+          final producto = productosProvider.productos.firstWhere(
+            (p) => p.idProducto == relacion.idProducto,
+          );
+
+          // Calcular stock total
+          final stockTotal = producto.stocks.fold<num>(
+            0,
+            (sum, stock) => sum + stock.stock,
+          );
+
+          productosCompletos.add({
+            'producto': producto,
+            'stockTotal': stockTotal,
+          });
+        } catch (e) {
+          // Producto no encontrado, continuar
+        }
+      }
+
+      // Ordenar por stock total de menor a mayor
+      productosCompletos.sort((a, b) => 
+        (a['stockTotal'] as num).compareTo(b['stockTotal'] as num)
+      );
+
+      if (mounted) {
+        setState(() {
+          _productosSugeridos = productosCompletos
+              .map((item) => item['producto'] as Producto)
+              .toList();
+        });
+      }
+    } catch (e) {
+      print('Error al cargar productos sugeridos: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +134,7 @@ class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
       ),
       body: Column(
         children: [
+          _buildProveedorSection(),
           _buildSearchBar(productosProvider),
           Expanded(
             child: _buildProductosList(productosProvider, pedidosProvider),
@@ -49,6 +142,59 @@ class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
           _buildDetallesPedido(pedidosProvider),
         ],
       ),
+    );
+  }
+
+  Widget _buildProveedorSection() {
+    return Consumer<DocumentosProvider>(
+      builder: (context, documentosProvider, _) {
+        final proveedores = documentosProvider.proveedores;
+        
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: DropdownButtonFormField<Proveedor>(
+            value: _proveedorSeleccionado,
+            decoration: const InputDecoration(
+              labelText: 'Seleccionar proveedor',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.local_shipping),
+            ),
+            items: [
+              const DropdownMenuItem<Proveedor>(
+                value: null,
+                child: Text('Sin proveedor'),
+              ),
+              ...proveedores.map((proveedor) {
+                return DropdownMenuItem<Proveedor>(
+                  value: proveedor,
+                  child: Text(proveedor.nombre),
+                );
+              }),
+            ],
+            onChanged: (Proveedor? nuevoProveedor) async {
+              setState(() {
+                _proveedorSeleccionado = nuevoProveedor;
+                _productosSugeridos = [];
+              });
+              
+              // Actualizar el pedido con el nuevo proveedor
+              final pedidosProvider = context.read<PedidosProvider>();
+              if (pedidosProvider.pedidoActual != null) {
+                pedidosProvider.setPedidoActual(
+                  pedidosProvider.pedidoActual!.copyWith(
+                    idProveedor: nuevoProveedor?.idProveedor,
+                  ),
+                );
+              }
+              
+              // Cargar productos sugeridos si se seleccionó un proveedor
+              if (nuevoProveedor != null) {
+                await _cargarProductosSugeridos(nuevoProveedor);
+              }
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -82,19 +228,31 @@ class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
     ProductosProvider productosProvider,
     PedidosProvider pedidosProvider,
   ) {
-    final productosFiltrados =
-        productosProvider.productosFiltrados
-            .where(
-              (p) =>
-                  p.descripcion.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  ) ||
-                  (p.codigo != null &&
-                      p.codigo!.toLowerCase().contains(
-                        _searchQuery.toLowerCase(),
-                      )),
-            )
-            .toList();
+    List<Producto> productosFiltrados;
+
+    // Si hay búsqueda manual, filtrar todos los productos
+    if (_searchQuery.isNotEmpty) {
+      productosFiltrados = productosProvider.productosFiltrados
+          .where(
+            (p) =>
+                p.descripcion.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                (p.codigo != null &&
+                    p.codigo!.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    )),
+          )
+          .toList();
+    } 
+    // Si hay proveedor seleccionado y no hay búsqueda, mostrar productos sugeridos
+    else if (_proveedorSeleccionado != null && _productosSugeridos.isNotEmpty) {
+      productosFiltrados = _productosSugeridos;
+    }
+    // Si no hay proveedor ni búsqueda, mostrar todos los productos filtrados
+    else {
+      productosFiltrados = productosProvider.productosFiltrados;
+    }
 
     return ListView.builder(
       itemCount: productosFiltrados.length,
@@ -221,7 +379,7 @@ class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
   void _mostrarDialogoCantidad(
     BuildContext context,
     Producto producto,
-    int cantidadActual,
+    num cantidadActual,
   ) {
     final textController = TextEditingController(
       text: cantidadActual.toString(),
@@ -259,7 +417,7 @@ class _CrearPedidoScreenState extends State<CrearPedidoScreen> {
   }
 
 
-  void _actualizarCantidad(int idProducto, int cantidad) {
+  void _actualizarCantidad(int idProducto, num cantidad) {
     final provider = context.read<PedidosProvider>();
     final nuevoDetalle = DetallePedido(
       idPedido: provider.pedidoActual!.idPedido,

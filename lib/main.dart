@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'presentation/providers/tiendas_provider.dart';
+import 'presentation/screens/company_selection_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,14 +33,62 @@ void main() async {
     final localStorage = LocalStorageService();
     await localStorage.init();
 
-    await SupabaseConfig.initialize();
+    // Verificar si hay una clave de configuración guardada
+    final hasConfigKey = await SupabaseConfig.hasConfigKey();
 
-    // Inicializar package_info_plus
-    await PackageInfo.fromPlatform();
+    if (!hasConfigKey) {
+      // Si no hay clave guardada, mostrar la pantalla de selección
+      // sin inicializar Supabase todavía
+      runApp(const CompanySelectionApp());
+    } else {
+      // Si hay clave guardada, inicializar normalmente
+      await SupabaseConfig.initialize();
 
-    runApp(const MyApp());
+      // Inicializar package_info_plus
+      await PackageInfo.fromPlatform();
+
+      runApp(const MyApp());
+    }
   } catch (e) {
-    print(e);
+    print('Error en main: $e');
+    // En caso de error, mostrar la app con pantalla de selección
+    runApp(const CompanySelectionApp());
+  }
+}
+
+/// App temporal para mostrar la pantalla de selección de empresa
+/// Esta app se muestra cuando no hay una clave de configuración guardada
+class CompanySelectionApp extends StatefulWidget {
+  const CompanySelectionApp({super.key});
+
+  @override
+  State<CompanySelectionApp> createState() => _CompanySelectionAppState();
+}
+
+class _CompanySelectionAppState extends State<CompanySelectionApp> {
+  Widget? _mainApp;
+
+  void _onCompanySelected() {
+    setState(() {
+      _mainApp = const MyApp();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_mainApp != null) {
+      return _mainApp!;
+    }
+
+    return MaterialApp(
+      title: 'Easy BO - Configuración',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: CompanySelectionScreen(onCompanySelected: _onCompanySelected),
+      debugShowCheckedModeBanner: false,
+    );
   }
 }
 
@@ -68,7 +117,7 @@ class MyApp extends StatelessWidget {
               ),
           update:
               (_, tiendasProvider, productosProvider) =>
-                  ProductosProvider(tiendasProvider),
+                  productosProvider ?? ProductosProvider(tiendasProvider),
         ),
         ChangeNotifierProxyProvider<TiendasProvider, VentasProvider>(
           create:

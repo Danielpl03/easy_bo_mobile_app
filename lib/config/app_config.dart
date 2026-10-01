@@ -2,11 +2,17 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 class AppConfig {
   static const String appName = 'Easy BO';
+  static const Map<String, String> nombresEmpresas = {
+    'mlsoluciones': 'M&L SOLUCIONES',
+    'la_calzada': 'LA CALZADA',
+    // Agregar más claves aquí cuando sea necesario
+    // Ejemplo: 'empresa_x', 'empresa_y', etc.
+  };
   static const String developer = 'DanielPl_03';
   static const String appDescription = 'Sistema de gestión para tiendas';
-  
+
   static PackageInfo? _packageInfo;
-  
+
   static Future<PackageInfo> get _getPackageInfo async {
     _packageInfo ??= await PackageInfo.fromPlatform();
     return _packageInfo!;
@@ -29,4 +35,4 @@ class AppConfig {
   }
 
   // Puedes agregar más configuraciones aquí según sea necesario
-} 
+}

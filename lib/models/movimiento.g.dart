@@ -19,22 +19,23 @@ class MovimientoAdapter extends TypeAdapter<Movimiento> {
     return Movimiento(
       idMovimiento: fields[0] as int,
       idProducto: fields[1] as int,
-      cantidad: fields[2] as int,
-      precioProducto: fields[3] as num,
+      cantidad: fields[2] as num,
+      precioProducto: fields[3] as num?,
       idDescuento: fields[4] as int?,
       idPago: fields[5] as int?,
       importe: fields[6] as num?,
-      saldoProducto: fields[7] as int?,
+      saldoProducto: fields[7] as num?,
       espejo: fields[8] as bool,
       idDocumento: fields[9] as String,
       descuento: fields[10] as num?,
+      costoProducto: fields[11] as num?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Movimiento obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.idMovimiento)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class MovimientoAdapter extends TypeAdapter<Movimiento> {
       ..writeByte(9)
       ..write(obj.idDocumento)
       ..writeByte(10)
-      ..write(obj.descuento);
+      ..write(obj.descuento)
+      ..writeByte(11)
+      ..write(obj.costoProducto);
   }
 
   @override

@@ -25,16 +25,17 @@ class ProductoAdapter extends TypeAdapter<Producto> {
       idCategoria: fields[5] as int?,
       activo: fields[6] as bool,
       barcode: fields[7] as String?,
-      costo: fields[8] as double?,
+      costo: fields[8] as num?,
       combo: fields[9] as bool,
-      web: fields[10] as bool,
+      web: fields[10] as bool?,
+      idMonedaCosto: fields[11] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Producto obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.idProducto)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class ProductoAdapter extends TypeAdapter<Producto> {
       ..writeByte(9)
       ..write(obj.combo)
       ..writeByte(10)
-      ..write(obj.web);
+      ..write(obj.web)
+      ..writeByte(11)
+      ..write(obj.idMonedaCosto);
   }
 
   @override

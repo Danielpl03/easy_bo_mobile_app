@@ -22,13 +22,14 @@ class PedidoAdapter extends TypeAdapter<Pedido> {
       idTienda: fields[2] as int,
       estado: fields[3] as String,
       observaciones: fields[4] as String?,
+      idProveedor: fields[5] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Pedido obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.idPedido)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class PedidoAdapter extends TypeAdapter<Pedido> {
       ..writeByte(3)
       ..write(obj.estado)
       ..writeByte(4)
-      ..write(obj.observaciones);
+      ..write(obj.observaciones)
+      ..writeByte(5)
+      ..write(obj.idProveedor);
   }
 
   @override

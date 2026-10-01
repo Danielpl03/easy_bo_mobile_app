@@ -11,7 +11,7 @@ class DetallePedido {
   final int idProducto;
   
   @HiveField(2)
-  final int cantidad;
+  final num cantidad;
   
 
   DetallePedido({
@@ -24,7 +24,7 @@ class DetallePedido {
     return DetallePedido(
       idPedido: json['id_pedido'] as int,
       idProducto: json['id_producto'] as int,
-      cantidad: json['cantidad'] as int,
+      cantidad: json['cantidad'] as num,
     );
   }
 

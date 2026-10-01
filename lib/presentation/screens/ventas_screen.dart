@@ -168,6 +168,10 @@ class _VentasScreenState extends State<VentasScreen> {
                   });
                 }
                 final monedasProvider = context.watch<MonedasProvider>();
+                num ganancia = provider.ventasAgrupadas.fold(
+                  0,
+                  (sum, grupo) => sum + (grupo.ganancia),
+                );
                 return RefreshIndicator(
                   onRefresh: () async {
                     provider.getVentas(tipo: 'VENTA');
@@ -182,14 +186,28 @@ class _VentasScreenState extends State<VentasScreen> {
                         children: [
                           ConstrainedBox(
                             constraints: BoxConstraints(
-                              maxHeight: MediaQuery.of(context).size.height * 0.4, // Ajusta la altura máxima según sea necesario
+                              maxHeight:
+                                  MediaQuery.of(context).size.height *
+                                  0.4, // Ajusta la altura máxima según sea necesario
                             ),
                             child: SingleChildScrollView(
-                              child: ResumenTiendas(monedasProvider: monedasProvider),
+                              child: ResumenTiendas(
+                                monedasProvider: monedasProvider,
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      Text(
+                        'Ganancia: \$${NumberFormat('#,##0.00', 'es_MX').format(ganancia)}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
                       Expanded(child: _buildListaDocumentos()),
                     ],
                   ),
@@ -384,6 +402,7 @@ class _DocumentoTile extends StatelessWidget {
             const SizedBox(width: 8),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   '\$${NumberFormat('#,##0.00', 'es_MX').format(documento.importe)}',
@@ -400,6 +419,14 @@ class _DocumentoTile extends StatelessWidget {
                     'Descuento: \$${NumberFormat('#,##0.00', 'es_MX').format(documento.descuento)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.error.withOpacity(0.8),
+                    ),
+                  ),
+                if (documento.costo != null && documento.costo! > 0)
+                  Text(
+                    'Ganancia: \$${NumberFormat('#,##0.00', 'es_MX').format((documento.importe ?? 0) - documento.costo!)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
               ],
@@ -481,6 +508,7 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
     final theme = Theme.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
           '\$${NumberFormat('#,##0.00', 'es_MX').format(widget.grupo.total)}',
@@ -492,8 +520,16 @@ class __GrupoDocumentosTileState extends State<_GrupoDocumentosTile> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        if (widget.grupo.costoTotal > 0)
+          Text(
+            'Ganancia: \$${NumberFormat('#,##0.00', 'es_MX').format(widget.grupo.ganancia)}',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.green.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         Text(
-          '${widget.grupo.ventas.length} ventas',
+          '${widget.grupo.ventas[0].movimientos.length} productos',
           style: theme.textTheme.bodySmall,
         ),
       ],
@@ -519,9 +555,10 @@ Widget _buildMovimientoItem(Movimiento movimiento, Producto producto) {
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${movimiento.cantidad} x \$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.precioProducto)}',
+              '${NumberFormat('#,##0.00', 'es_MX').format(movimiento.cantidad)} x \$${NumberFormat('#,##0.00', 'es_MX').format(movimiento.precioProducto ?? 0)}',
               style: theme.textTheme.bodySmall,
             ),
             if (movimiento.descuento != null && movimiento.descuento! > 0)
@@ -539,6 +576,15 @@ Widget _buildMovimientoItem(Movimiento movimiento, Producto producto) {
                 color: theme.colorScheme.primary,
               ),
             ),
+            if (movimiento.costoProducto != null &&
+                movimiento.costoProducto! > 0)
+              Text(
+                'Ganancia: \$${NumberFormat('#,##0.00', 'es_MX').format((movimiento.importe ?? 0) - (movimiento.costoProducto! * movimiento.cantidad))}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.green.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
           ],
         ),
       );
